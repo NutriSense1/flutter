@@ -24,72 +24,145 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (_, __) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboarding,
-        builder: (_, __) => const OnboardingScreen(),
+        pageBuilder: (c, s) => _fade(s.pageKey, const SplashScreen()),
       ),
       GoRoute(
         path: AppRoutes.auth,
-        builder: (_, __) => const AuthScreen(),
+        pageBuilder: (c, s) => _fade(s.pageKey, const AuthScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        pageBuilder: (c, s) => _slideFade(s.pageKey, const OnboardingScreen()),
       ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            builder: (_, __) => const HomeScreen(),
+            pageBuilder: (c, s) =>
+                NoTransitionPage(key: s.pageKey, child: const HomeScreen()),
           ),
           GoRoute(
             path: AppRoutes.diary,
-            builder: (_, __) => const DiaryScreen(),
+            pageBuilder: (c, s) =>
+                NoTransitionPage(key: s.pageKey, child: const DiaryScreen()),
           ),
           GoRoute(
             path: AppRoutes.coach,
-            builder: (_, __) => const CoachScreen(),
+            pageBuilder: (c, s) =>
+                NoTransitionPage(key: s.pageKey, child: const CoachScreen()),
           ),
           GoRoute(
             path: AppRoutes.analytics,
-            builder: (_, __) => const AnalyticsScreen(),
+            pageBuilder: (c, s) =>
+                NoTransitionPage(key: s.pageKey, child: const AnalyticsScreen()),
           ),
           GoRoute(
             path: AppRoutes.profile,
-            builder: (_, __) => const ProfileScreen(),
+            pageBuilder: (c, s) =>
+                NoTransitionPage(key: s.pageKey, child: const ProfileScreen()),
           ),
         ],
       ),
+      // Modal-style routes slide up from bottom
       GoRoute(
         path: AppRoutes.scanner,
-        builder: (_, __) => const ScannerScreen(),
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const ScannerScreen()),
       ),
       GoRoute(
         path: AppRoutes.scanResult,
-        builder: (context, state) {
-          final result = state.extra as ScanResultModel;
-          return ScanResultScreen(result: result);
+        pageBuilder: (c, s) {
+          final result = s.extra as ScanResultModel;
+          return _slideUp(s.pageKey, ScanResultScreen(result: result));
         },
       ),
       GoRoute(
         path: AppRoutes.weight,
-        builder: (_, __) => const WeightScreen(),
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const WeightScreen()),
       ),
       GoRoute(
         path: AppRoutes.water,
-        builder: (_, __) => const WaterScreen(),
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const WaterScreen()),
       ),
       GoRoute(
         path: AppRoutes.achievements,
-        builder: (_, __) => const AchievementsScreen(),
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const AchievementsScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Text('Page not found: ${state.error}'),
-      ),
+      body: Center(child: Text('Page not found: ${state.error}')),
     ),
   );
 });
+
+// ─── Transition Factories ─────────────────────────────────────────────────────
+
+/// Clean cross-fade — used for auth ↔ splash transitions (no spatial direction).
+CustomTransitionPage<void> _fade(LocalKey key, Widget child) {
+  return CustomTransitionPage<void>(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 380),
+    reverseTransitionDuration: const Duration(milliseconds: 280),
+    transitionsBuilder: (_, animation, __, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+        child: child,
+      );
+    },
+  );
+}
+
+/// Fade + gentle upward slide — main forward navigation feel.
+CustomTransitionPage<void> _slideFade(LocalKey key, Widget child) {
+  return CustomTransitionPage<void>(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 400),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
+    transitionsBuilder: (_, animation, __, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeIn),
+        child: SlideTransition(
+          position:
+              Tween<Offset>(begin: const Offset(0.0, 0.05), end: Offset.zero)
+                  .animate(curved),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+/// Full slide-up from bottom — modal-feel push routes (scanner, water, weight).
+CustomTransitionPage<void> _slideUp(LocalKey key, Widget child) {
+  return CustomTransitionPage<void>(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 420),
+    reverseTransitionDuration: const Duration(milliseconds: 320),
+    transitionsBuilder: (_, animation, __, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(
+          parent: animation,
+          curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+        ),
+        child: SlideTransition(
+          position:
+              Tween<Offset>(begin: const Offset(0.0, 1.0), end: Offset.zero)
+                  .animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  )),
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+// ─── Route Constants ──────────────────────────────────────────────────────────
 
 class AppRoutes {
   AppRoutes._();

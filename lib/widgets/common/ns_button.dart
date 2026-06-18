@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/animations/animated_tap.dart';
 
 // ─── NsButton ─────────────────────────────────────────────────────────────────
 
@@ -25,34 +26,63 @@ class NsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (outlined) {
-      return OutlinedButton(
-        onPressed: loading ? null : onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: color ?? AppColors.primary,
-          side: BorderSide(color: color ?? AppColors.primary, width: 1.5),
+      return AnimatedTap(
+        onTap: loading ? null : onPressed,
+        scale: 0.97,
+        child: Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: color ?? AppColors.primary,
+              width: 1.5,
+            ),
+          ),
+          child: Center(child: _child(color ?? AppColors.primary)),
         ),
-        child: _child,
       );
     }
-    return ElevatedButton(
-      onPressed: loading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color ?? AppColors.primary,
-        disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+
+    final bg = color ?? AppColors.primary;
+    return AnimatedTap(
+      onTap: loading ? null : onPressed,
+      scale: 0.97,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: loading
+              ? LinearGradient(colors: [bg.withOpacity(0.6), bg.withOpacity(0.6)])
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    color != null ? color!.withOpacity(0.9) : AppColors.primaryLight,
+                    color ?? AppColors.primaryDark,
+                  ],
+                ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: loading
+              ? []
+              : [
+                  BoxShadow(
+                    color: bg.withOpacity(0.38),
+                    blurRadius: 18,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+        ),
+        child: Center(child: _child(Colors.white)),
       ),
-      child: _child,
     );
   }
 
-  Widget get _child {
+  Widget _child(Color textColor) {
     if (loading) {
-      return const SizedBox(
+      return SizedBox(
         width: 22,
         height: 22,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.5,
-          color: Colors.white,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2.5, color: textColor),
       );
     }
     if (icon != null) {
@@ -60,17 +90,31 @@ class NsButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 20),
+          Icon(icon, size: 20, color: textColor),
           const SizedBox(width: 8),
-          Text(label),
+          Text(
+            label,
+            style: AppTypography.labelLarge.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: textColor,
+            ),
+          ),
         ],
       );
     }
-    return Text(label);
+    return Text(
+      label,
+      style: AppTypography.labelLarge.copyWith(
+        fontWeight: FontWeight.w600,
+        fontSize: 16,
+        color: textColor,
+      ),
+    );
   }
 }
 
-// ─── NsTextField ──────────────────────────────────────────────────────────────
+// ─── NsTextField ─────────────────────────────────────────────────────────────
 
 class NsTextField extends StatelessWidget {
   final TextEditingController? controller;
