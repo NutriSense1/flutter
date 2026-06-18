@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "750499933497",
+    "project_id": "nutrisense-xd",
+    "storage_bucket": "nutrisense-xd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:750499933497:android:22a371bff63c40c73c4ce8",
+        "android_client_info": {
+          "package_name": "com.example.nutrisense"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "750499933497-fii0h4v4f8gd7nv5fo8ulvq1nm1b09nn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNBjrNL-0oJca1MnTXBzKS5CXDvLWLzBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "750499933497-fii0h4v4f8gd7nv5fo8ulvq1nm1b09nn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

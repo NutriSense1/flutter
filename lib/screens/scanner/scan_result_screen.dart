@@ -7,6 +7,8 @@ import '../../core/constants/app_constants.dart';
 import '../../models/scan_result_model.dart';
 import '../../providers/food_log_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../widgets/common/ns_button.dart';
 
 class ScanResultScreen extends ConsumerStatefulWidget {
@@ -20,24 +22,60 @@ class ScanResultScreen extends ConsumerStatefulWidget {
 class _ScanResultScreenState extends ConsumerState<ScanResultScreen> {
   String _selectedMeal = 'Lunch';
   double _servings = 1.0;
+  bool _logging = false;
 
-  void _logFood() {
+  Future<void> _logFood() async {
     final user = ref.read(userProvider);
     if (user == null) return;
+
+    setState(() => _logging = true);
+
+    // Optimistic local update so the diary feels instant even before
+    // the network call resolves.
     ref.read(foodLogsProvider.notifier).addFromScan(
       widget.result,
       _selectedMeal,
       user.id,
       servings: _servings,
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.result.productName} added to $_selectedMeal'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    context.pop();
+
+    try {
+      final api = ref.read(apiServiceProvider);
+      await api.createFoodLog({
+        'scan_id': widget.result.id,
+        'product_name': widget.result.productName,
+        'brand': widget.result.brand,
+        'image_url': widget.result.imageUrl,
+        'meal_type': _selectedMeal,
+        'serving_size': widget.result.servingSize,
+        'serving_unit': widget.result.servingUnit,
+        'servings_consumed': _servings,
+        'nutrition_info': widget.result.nutritionInfo.toJson(),
+        'health_score': widget.result.healthScore,
+      });
+      ref.read(userProvider.notifier).addXP(5);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${widget.result.productName} added to $_selectedMeal'),
+          backgroundColor: AppColors.primary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.pop();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _logging = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Saved locally but failed to sync: ${e.message}'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.pop();
+    }
   }
 
   Color get _scoreColor {
@@ -184,7 +222,7 @@ class _ScanResultScreenState extends ConsumerState<ScanResultScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: NsButton(label: 'Add to $_selectedMeal', onPressed: _logFood),
+          child: NsButton(label: 'Add to $_selectedMeal', onPressed: _logFood, loading: _logging),
         ),
       ),
     );

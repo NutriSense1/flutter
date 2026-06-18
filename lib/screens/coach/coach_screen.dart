@@ -5,6 +5,8 @@ import '../../core/theme/app_typography.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/food_log_provider.dart';
 import '../../providers/tracking_providers.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 
 class CoachScreen extends ConsumerStatefulWidget {
   const CoachScreen({super.key});
@@ -43,36 +45,25 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     });
     _scrollToBottom();
 
-    await Future.delayed(const Duration(milliseconds: 1200));
-    final summary = ref.read(todaySummaryProvider);
-    final user = ref.read(userProvider);
-    final response = _generateMockResponse(text, summary.totalCalories, user?.dailyCalorieTarget ?? 2000);
-
-    if (!mounted) return;
-    setState(() {
-      _messages.add(_ChatMessage(response, false));
-      _isTyping = false;
-    });
+    try {
+      final api = ref.read(apiServiceProvider);
+      final reply = await api.askCoach(text);
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_ChatMessage(reply, false));
+        _isTyping = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(_ChatMessage(
+          "Sorry, I couldn't process that: ${e.message}",
+          false,
+        ));
+        _isTyping = false;
+      });
+    }
     _scrollToBottom();
-  }
-
-  String _generateMockResponse(String input, double consumed, double target) {
-    final remaining = (target - consumed).round();
-    final lower = input.toLowerCase();
-    if (lower.contains('meal') || lower.contains('eat') || lower.contains('dinner')) {
-      return "Based on your remaining $remaining kcal and protein gap, I'd suggest grilled "
-          "salmon with quinoa and steamed broccoli — high protein, omega-3s, and fiber to keep you full.";
-    }
-    if (lower.contains('weight') || lower.contains('progress')) {
-      return "Your weight trend over the last 2 weeks looks steady. Consistency in logging "
-          "is the biggest lever right now — try to log every meal for the next 7 days.";
-    }
-    if (lower.contains('water') || lower.contains('hydrat')) {
-      return "Staying hydrated supports metabolism and reduces unnecessary snacking. "
-          "Try drinking a glass of water before each meal.";
-    }
-    return "You have $remaining kcal remaining today. Based on your goal, focus on "
-        "protein-dense, whole foods for your next meal to stay on track.";
   }
 
   void _scrollToBottom() {

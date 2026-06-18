@@ -6,6 +6,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/router/app_router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../widgets/common/ns_button.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 10;
+  bool _submitting = false;
+  String? _submitError;
 
   void _next() {
     if (_currentPage < _totalPages - 1) {
@@ -27,7 +31,49 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      context.go(AppRoutes.auth);
+      _submitOnboarding();
+    }
+  }
+
+  /// Sends the collected answers to the backend, which creates the
+  /// `users` row and computes BMR/TDEE/calorie targets server-side.
+  /// Requires the user to already be signed in to Firebase (auth now
+  /// happens BEFORE onboarding in the app flow).
+  Future<void> _submitOnboarding() async {
+    final data = ref.read(onboardingProvider);
+    if (!data.isComplete) {
+      setState(() => _submitError = 'Please complete all steps.');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+    });
+
+    try {
+      final api = ref.read(apiServiceProvider);
+      final user = await api.completeOnboarding({
+        'name': data.name,
+        'age': data.age,
+        'gender': data.gender,
+        'height_cm': data.heightCm,
+        'weight_kg': data.weightKg,
+        'goal_weight_kg': data.goalWeightKg,
+        'activity_level': data.activityLevel,
+        'goal': data.goal,
+        'dietary_preferences': data.dietaryPreferences,
+        'allergies': data.allergies,
+        'water_goal_liters': data.waterGoalLiters,
+      });
+      ref.read(userProvider.notifier).setUser(user);
+      ref.read(onboardingProvider.notifier).reset();
+      if (!mounted) return;
+      context.go(AppRoutes.home);
+    } on ApiException catch (e) {
+      setState(() => _submitError = e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -79,6 +125,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       minHeight: 6,
                     ),
                   ),
+                  if (_submitError != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_submitError!,
+                                style: AppTypography.bodySmall.copyWith(color: AppColors.error)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -97,7 +164,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   _GoalPage(onNext: _next),
                   _GoalWeightPage(onNext: _next),
                   _DietaryPage(onNext: _next),
-                  _AllergiesPage(onNext: _next),
+                  _AllergiesPage(onNext: _next, loading: _submitting),
                 ],
               ),
             ),
@@ -491,7 +558,8 @@ class _DietaryPage extends ConsumerWidget {
 
 class _AllergiesPage extends ConsumerWidget {
   final VoidCallback onNext;
-  const _AllergiesPage({required this.onNext});
+  final bool loading;
+  const _AllergiesPage({required this.onNext, this.loading = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -502,6 +570,7 @@ class _AllergiesPage extends ConsumerWidget {
       subtitle: 'We\'ll warn you when detected allergens are found.',
       onNext: onNext,
       nextLabel: 'Finish',
+      loading: loading,
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -532,6 +601,7 @@ class _OnboardingPageShell extends StatelessWidget {
   final Widget child;
   final VoidCallback onNext;
   final String nextLabel;
+  final bool loading;
 
   const _OnboardingPageShell({
     required this.emoji,
@@ -540,6 +610,7 @@ class _OnboardingPageShell extends StatelessWidget {
     required this.child,
     required this.onNext,
     this.nextLabel = 'Continue',
+    this.loading = false,
   });
 
   @override
@@ -558,7 +629,7 @@ class _OnboardingPageShell extends StatelessWidget {
               style: AppTypography.bodyLarge.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 32),
           Expanded(child: SingleChildScrollView(child: child)),
-          NsButton(label: nextLabel, onPressed: onNext),
+          NsButton(label: nextLabel, onPressed: onNext, loading: loading),
           const SizedBox(height: 16),
         ],
       ),

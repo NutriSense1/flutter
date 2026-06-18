@@ -2,7 +2,11 @@ class AppConstants {
   AppConstants._();
 
   // API
-  static const String baseUrl = 'https://nutrisense-api.onrender.com/api/v1';
+  // ⚠️ Replace with YOUR actual Render deployment URL after deploying
+  // the backend (see nutrisense-backend/README.md). Render gives you
+  // this URL once the service finishes its first deploy, e.g.
+  // https://nutrisense-api-xxxx.onrender.com
+  static const String baseUrl = 'https://nutrisense-api.onrender.com';
   static const String openFoodFactsUrl = 'https://world.openfoodfacts.org/api/v3';
 
   // Storage keys

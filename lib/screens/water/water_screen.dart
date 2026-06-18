@@ -5,6 +5,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/tracking_providers.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 
 class WaterScreen extends ConsumerWidget {
   const WaterScreen({super.key});
@@ -16,10 +18,21 @@ class WaterScreen extends ConsumerWidget {
     final target = user?.waterGoalLiters ?? AppConstants.defaultWaterGoalLiters;
     final progress = (consumed / target).clamp(0.0, 1.0);
 
-    void addWater(double liters) {
+    Future<void> addWater(double liters) async {
       if (user == null) return;
+      // Optimistic local update
       ref.read(waterLogsProvider.notifier).addWater(user.id, liters);
       ref.read(userProvider.notifier).addXP(3);
+
+      try {
+        await ref.read(apiServiceProvider).logWater(liters);
+      } on ApiException catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to sync water log: ${e.message}')),
+          );
+        }
+      }
     }
 
     return Scaffold(

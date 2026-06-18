@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/router/app_router.dart';
 import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -137,7 +138,11 @@ class ProfileScreen extends ConsumerWidget {
               icon: Icons.logout_rounded,
               label: 'Sign Out',
               color: AppColors.error,
-              onTap: () => context.go(AppRoutes.auth),
+              onTap: () async {
+                await ref.read(authServiceProvider).signOut();
+                ref.read(userProvider.notifier).clearUser();
+                if (context.mounted) context.go(AppRoutes.auth);
+              },
             ),
           ],
         ),

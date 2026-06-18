@@ -1,11 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/router/app_router.dart';
-import '../../models/scan_result_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/tracking_providers.dart';
+import '../../services/api_service.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
@@ -17,6 +21,8 @@ class ScannerScreen extends ConsumerStatefulWidget {
 class _ScannerScreenState extends ConsumerState<ScannerScreen>
     with SingleTickerProviderStateMixin {
   bool _isScanning = false;
+  String? _errorMessage;
+  final ImagePicker _picker = ImagePicker();
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
 
@@ -38,55 +44,45 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     super.dispose();
   }
 
-  Future<void> _simulateScan() async {
-    setState(() => _isScanning = true);
-    // Simulate API call (2s)
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() => _isScanning = false);
+  Future<void> _capture(ImageSource source) async {
+    setState(() => _errorMessage = null);
 
-    // Mock result
-    final result = ScanResultModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      productName: 'Greek Yogurt',
-      brand: 'Chobani',
-      foodType: 'Dairy',
-      ingredients: ['Cultured Nonfat Milk', 'Cream', 'Live & Active Cultures'],
-      detectedAdditives: [],
-      detectedAllergens: ['Dairy'],
-      nutritionInfo: const NutritionInfo(
-        calories: 130,
-        protein: 17,
-        carbs: 9,
-        fat: 3.5,
-        fiber: 0,
-        sugar: 7,
-        sodium: 65,
-        saturatedFat: 2,
-      ),
-      servingSize: 150,
-      servingUnit: 'g',
-      healthScore: 82,
-      healthScoreLabel: 'Excellent',
-      aiVerdict:
-          'Excellent choice! Greek yogurt is high in protein and probiotics. '
-          'It supports gut health, muscle recovery, and satiety. '
-          'The low sugar content and healthy fat profile make this a nutritional powerhouse.',
-      positives: ['High protein (17g)', 'Good source of calcium', 'Live probiotics', 'Low sugar'],
-      negatives: ['Contains dairy (allergen)'],
-      recommendations: [
-        'Pair with berries for antioxidants',
-        'Add honey for natural sweetness',
-        'Great post-workout meal',
-      ],
-      isUltraProcessed: false,
-      confidence: ScanConfidence.high,
-      scannedAt: DateTime.now(),
+    final XFile? picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 85, // compress to keep upload fast & under size limits
+      maxWidth: 1600,
     );
+    if (picked == null) return; // user cancelled
 
-    ref.read(scanHistoryProvider.notifier).addScan(result);
-    if (!mounted) return;
-    context.push(AppRoutes.scanResult, extra: result);
+    setState(() => _isScanning = true);
+
+    try {
+      final bytes = await File(picked.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      final api = ref.read(apiServiceProvider);
+      final result = await api.scanFood(imageBase64: base64Image);
+
+      ref.read(scanHistoryProvider.notifier).addScan(result);
+
+      if (!mounted) return;
+      setState(() => _isScanning = false);
+      context.push(AppRoutes.scanResult, extra: result);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isScanning = false;
+        _errorMessage = e.statusCode == 402
+            ? 'Daily scan limit reached. Upgrade to Premium for unlimited scans.'
+            : e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isScanning = false;
+        _errorMessage = 'Something went wrong. Please try again.';
+      });
+    }
   }
 
   @override
@@ -95,7 +91,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ── Fake Camera Preview ──
+          // ── Background ──
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -106,7 +102,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             ),
           ),
 
-          // ── Scanning overlay frame ──
+          // ── Scan frame ──
           Center(
             child: AnimatedBuilder(
               animation: _pulseAnim,
@@ -122,18 +118,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: _isScanning
-                        ? AppColors.accent
-                        : AppColors.primary,
+                    color: _isScanning ? AppColors.accent : AppColors.primary,
                     width: 3,
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    // Corner decorations
-                    ..._buildCorners(),
-                    if (_isScanning)
-                      Center(
+                child: _isScanning
+                    ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -146,11 +136,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                               'Analysing...',
                               style: AppTypography.titleMedium.copyWith(color: Colors.white),
                             ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Identifying food & checking nutrition',
+                              style: AppTypography.bodySmall.copyWith(color: Colors.white60),
+                            ),
                           ],
                         ),
-                      ),
-                  ],
-                ),
+                      )
+                    : const Icon(Icons.center_focus_strong_rounded,
+                        color: Colors.white24, size: 48),
               ),
             ),
           ),
@@ -179,19 +174,36 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     style: AppTypography.titleLarge.copyWith(color: Colors.white),
                   ),
                   const Spacer(),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.flash_on_rounded, color: Colors.white),
-                  ),
+                  const SizedBox(width: 44), // balance the close button
                 ],
               ),
             ),
           ),
+
+          // ── Error banner ──
+          if (_errorMessage != null)
+            Positioned(
+              top: 90,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(_errorMessage!,
+                          style: AppTypography.bodySmall.copyWith(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // ── Bottom controls ──
           Positioned(
@@ -218,15 +230,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Gallery button
                       _ScannerActionBtn(
                         icon: Icons.photo_library_outlined,
                         label: 'Gallery',
-                        onTap: _isScanning ? null : _simulateScan,
+                        onTap: _isScanning ? null : () => _capture(ImageSource.gallery),
                       ),
-                      // Shutter
                       GestureDetector(
-                        onTap: _isScanning ? null : _simulateScan,
+                        onTap: _isScanning ? null : () => _capture(ImageSource.camera),
                         child: Container(
                           width: 80,
                           height: 80,
@@ -242,12 +252,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                           ),
                         ),
                       ),
-                      // Barcode button
-                      _ScannerActionBtn(
-                        icon: Icons.qr_code_scanner_rounded,
-                        label: 'Barcode',
-                        onTap: _isScanning ? null : _simulateScan,
-                      ),
+                      // Spacer to balance the gallery button (barcode scanning is V2)
+                      const SizedBox(width: 52),
                     ],
                   ),
                 ],
@@ -258,72 +264,6 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       ),
     );
   }
-
-  List<Widget> _buildCorners() {
-    const size = 24.0;
-    const thickness = 4.0;
-    final color = _isScanning ? AppColors.accent : AppColors.primary;
-    return [
-      // Top-left
-      Positioned(top: -1, left: -1, child: _Corner(color: color, size: size, thickness: thickness)),
-      // Top-right
-      Positioned(
-          top: -1,
-          right: -1,
-          child: Transform.rotate(
-              angle: 1.5708,
-              child: _Corner(color: color, size: size, thickness: thickness))),
-      // Bottom-left
-      Positioned(
-          bottom: -1,
-          left: -1,
-          child: Transform.rotate(
-              angle: -1.5708,
-              child: _Corner(color: color, size: size, thickness: thickness))),
-      // Bottom-right
-      Positioned(
-          bottom: -1,
-          right: -1,
-          child: Transform.rotate(
-              angle: 3.1416,
-              child: _Corner(color: color, size: size, thickness: thickness))),
-    ];
-  }
-}
-
-class _Corner extends StatelessWidget {
-  final Color color;
-  final double size;
-  final double thickness;
-  const _Corner({required this.color, required this.size, required this.thickness});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _CornerPainter(color: color, thickness: thickness),
-    );
-  }
-}
-
-class _CornerPainter extends CustomPainter {
-  final Color color;
-  final double thickness;
-  const _CornerPainter({required this.color, required this.thickness});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = thickness
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, size.height), const Offset(0, 0), paint);
-    canvas.drawLine(const Offset(0, 0), Offset(size.width, 0), paint);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
 
 class _ScannerActionBtn extends StatelessWidget {

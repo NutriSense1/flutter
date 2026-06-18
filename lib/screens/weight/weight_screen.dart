@@ -6,6 +6,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/utils/nutrition_calculator.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/tracking_providers.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../widgets/common/ns_button.dart';
 
 class WeightScreen extends ConsumerStatefulWidget {
@@ -47,17 +49,32 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
               const SizedBox(height: 20),
               NsButton(
                 label: 'Save',
-                onPressed: () {
+                onPressed: () async {
                   final value = double.tryParse(ctrl.text);
-                  if (value != null && value > 0) {
-                    final u = ref.read(userProvider);
-                    if (u != null) {
-                      ref.read(weightLogsProvider.notifier).addWeight(u.id, value);
-                      ref.read(userProvider.notifier).updateWeight(value);
-                      ref.read(userProvider.notifier).addXP(8);
+                  if (value == null || value <= 0) {
+                    Navigator.pop(ctx);
+                    return;
+                  }
+                  final u = ref.read(userProvider);
+                  if (u == null) {
+                    Navigator.pop(ctx);
+                    return;
+                  }
+                  // Optimistic local update
+                  ref.read(weightLogsProvider.notifier).addWeight(u.id, value);
+                  ref.read(userProvider.notifier).updateWeight(value);
+                  ref.read(userProvider.notifier).addXP(8);
+                  Navigator.pop(ctx);
+
+                  try {
+                    await ref.read(apiServiceProvider).logWeight(value);
+                  } on ApiException catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to sync weight: ${e.message}')),
+                      );
                     }
                   }
-                  Navigator.pop(ctx);
                 },
               ),
               const SizedBox(height: 16),
