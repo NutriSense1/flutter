@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "750499933497-7mlgao78sleplhcnra7d92a1gs7k6kdo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nutrisense",
+            "certificate_hash": "f014d696771b8795584e5e8712b09477ed096707"
+          }
+        },
+        {
           "client_id": "750499933497-fii0h4v4f8gd7nv5fo8ulvq1nm1b09nn.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +37,13 @@
             {
               "client_id": "750499933497-fii0h4v4f8gd7nv5fo8ulvq1nm1b09nn.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "750499933497-rpoj178k1df91gsp7lcm8iafnisr05or.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nutrisense"
+              }
             }
           ]
         }
