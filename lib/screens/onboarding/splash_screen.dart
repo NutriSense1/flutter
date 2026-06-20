@@ -172,15 +172,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         Container(
                           width: 72,
                           height: 72,
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF34D47A),
-                                Color(0xFF0F9D58),
-                              ],
-                            ),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
@@ -191,10 +185,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.restaurant_menu_rounded,
-                            color: Colors.white,
-                            size: 40,
+                          child: Image.asset(
+                            'assets/images/logo_icon.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ],

@@ -48,9 +48,22 @@ dependencies:
   permission_handler: ^11.3.1
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  web: true
+  windows: false
+  macos: false
+  linux: false
+  # Use the square icon-only mark, not the full wordmark+tagline logo —
+  # launcher icons get cropped to a circle/squircle by the OS and have no
+  # room for text at the sizes they're rendered at (as low as 36x36).
+  image_path: "assets/images/logo_icon.png"
 
 flutter:
   uses-material-design: true

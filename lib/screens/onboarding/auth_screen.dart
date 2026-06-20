@@ -9,9 +9,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/common/ns_button.dart';
-import '../../widgets/common/ns_text_field.dart';
 
+/// Google Sign-In is the ONLY auth method in this app — there is no
+/// email/password form here by design (see AuthService).
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
@@ -28,13 +28,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   late Animation<Offset> _cardSlide;
   late Animation<double> _cardFade;
 
-  // ── Form state ──────────────────────────────────────────────────────────────
-  int _tab = 0; // 0 = sign in, 1 = sign up
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _nameCtrl = TextEditingController();
   bool _loading = false;
-  bool _obscure = true;
   String? _error;
 
   @override
@@ -65,64 +59,60 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   @override
   void dispose() {
     _entryCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    _nameCtrl.dispose();
     super.dispose();
   }
 
   // ── Routing ─────────────────────────────────────────────────────────────────
-  Future<void> _routeAfterAuth() async {
+  //
+  // After a successful Google sign-in we still need to ask the backend
+  // whether this person has a profile yet (GET /users/me). Two things used
+  // to go wrong here:
+  //   1. That request had no timeout, so a sleeping free-tier backend could
+  //      hang indefinitely with the button just spinning forever.
+  //   2. Only `ApiException` was caught — any other error (timeout, DNS,
+  //      socket) fell through uncaught, silently resetting `_loading` with
+  //      no message and no navigation. From the outside that looked exactly
+  //      like "the Google account got linked but nothing happens".
+  //
+  // Fix: every ApiService call now times out instead of hanging (see
+  // ApiService), and we retry once here on a timeout (covers a cold-start
+  // wake-up, which can take up to ~60s on Render's free tier) before
+  // showing a clear, actionable message.
+  Future<void> _routeAfterAuth({bool isRetry = false}) async {
     final api = ref.read(apiServiceProvider);
     try {
       final profile = await api.getProfile();
       ref.read(userProvider.notifier).setUser(profile);
       if (!mounted) return;
       context.go(AppRoutes.home);
+    } on ApiTimeoutException {
+      if (!isRetry) {
+        await _routeAfterAuth(isRetry: true);
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _error =
+          "Couldn't reach the server — it may be waking up. Please try again in a few seconds.");
     } on ApiException catch (e) {
       if (e.statusCode == 404) {
+        // No backend profile yet → first time through onboarding.
+        // Carry over the Google display name so onboarding's name step
+        // opens pre-filled instead of asking again from scratch.
+        final knownName = ref.read(authServiceProvider).currentUser?.displayName;
+        if (knownName != null && knownName.trim().isNotEmpty) {
+          ref.read(onboardingProvider.notifier).updateName(knownName.trim());
+        }
         if (!mounted) return;
         context.go(AppRoutes.onboarding);
       } else {
+        if (!mounted) return;
         setState(() => _error = e.message);
       }
-    }
-  }
-
-  Future<void> _signIn() async {
-    if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
-      setState(() => _error = 'Enter your email and password.');
-      return;
-    }
-    setState(() { _loading = true; _error = null; });
-    try {
-      await ref.read(authServiceProvider).signInWithEmail(
-          _emailCtrl.text.trim(), _passwordCtrl.text);
-      await _routeAfterAuth();
-    } on AuthException catch (e) {
-      setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _signUp() async {
-    if (_nameCtrl.text.trim().isEmpty ||
-        _emailCtrl.text.trim().isEmpty ||
-        _passwordCtrl.text.length < 6) {
-      setState(() => _error = 'Fill all fields (password min. 6 chars).');
-      return;
-    }
-    setState(() { _loading = true; _error = null; });
-    try {
-      await ref.read(authServiceProvider).signUpWithEmail(
-          _emailCtrl.text.trim(), _passwordCtrl.text);
+    } catch (_) {
+      // Catch-all so an unexpected error never leaves the screen stuck
+      // with no feedback — always either navigate or show a message.
       if (!mounted) return;
-      context.go(AppRoutes.onboarding);
-    } on AuthException catch (e) {
-      setState(() => _error = e.message);
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      setState(() => _error = 'Something went wrong. Please try again.');
     }
   }
 
@@ -130,28 +120,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     setState(() { _loading = true; _error = null; });
     try {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
-      if (user == null) { setState(() => _loading = false); return; }
+      if (user == null) { setState(() => _loading = false); return; } // cancelled
       await _routeAfterAuth();
     } on AuthException catch (e) {
       setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _forgotPassword() async {
-    if (_emailCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Enter your email first, then tap "Forgot password?"');
-      return;
-    }
-    try {
-      await ref.read(authServiceProvider)
-          .sendPasswordResetEmail(_emailCtrl.text.trim());
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Reset link sent to ${_emailCtrl.text.trim()}')));
-    } on AuthException catch (e) {
-      setState(() => _error = e.message);
     }
   }
 
@@ -192,14 +168,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 68,
-                          height: 68,
+                          width: 84,
+                          height: 84,
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF34D47A), Color(0xFF0F9D58)],
-                            ),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
@@ -209,8 +182,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.restaurant_menu_rounded,
-                              color: Colors.white, size: 38),
+                          child: Image.asset(
+                            'assets/images/logo_icon.png',
+                            fit: BoxFit.contain,
+                          ),
                         ),
                         const SizedBox(height: 18),
                         Text(
@@ -240,7 +215,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ),
           ),
 
-          // ── White form card (slides up) ───────────────────────────────────
+          // ── White card (slides up) ────────────────────────────────────────
           Positioned(
             top: headerHeight - 16,
             left: 0,
@@ -273,11 +248,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
 
                         // Heading
                         Text(
-                          _tab == 0 ? 'Welcome back' : 'Create account',
+                          'Welcome',
                           style: AppTypography.displayMedium.copyWith(
                             fontWeight: FontWeight.w800,
                             letterSpacing: -1.0,
@@ -285,43 +260,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _tab == 0
-                              ? 'Your nutrition journey continues here.'
-                              : 'Start understanding your food today.',
+                          'Sign in with Google to start understanding your food.',
                           style: AppTypography.bodyMedium.copyWith(
                               color: AppColors.textSecondary),
                         ),
-                        const SizedBox(height: 24),
-
-                        // ── Tab selector ─────────────────────────────────
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceVariant,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              _PillTab(
-                                  label: 'Sign In',
-                                  active: _tab == 0,
-                                  onTap: () => setState(
-                                      () { _tab = 0; _error = null; })),
-                              _PillTab(
-                                  label: 'Sign Up',
-                                  active: _tab == 1,
-                                  onTap: () => setState(
-                                      () { _tab = 1; _error = null; })),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 32),
 
                         // ── Error banner ──────────────────────────────────
                         if (_error != null)
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(bottom: 16),
+                            margin: const EdgeInsets.only(bottom: 20),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppColors.error.withOpacity(0.07),
@@ -343,68 +292,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                             ),
                           ),
 
-                        // ── Animated form switcher ────────────────────────
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          transitionBuilder: (child, animation) =>
-                              FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                      begin: const Offset(0.04, 0),
-                                      end: Offset.zero)
-                                  .animate(CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeOutCubic)),
-                              child: child,
-                            ),
-                          ),
-                          child: _tab == 0
-                              ? _SignInForm(
-                                  key: const ValueKey('signin'),
-                                  emailCtrl: _emailCtrl,
-                                  passwordCtrl: _passwordCtrl,
-                                  obscure: _obscure,
-                                  onToggleObscure: () =>
-                                      setState(() => _obscure = !_obscure),
-                                  loading: _loading,
-                                  onSubmit: _signIn,
-                                  onForgot: _forgotPassword,
-                                )
-                              : _SignUpForm(
-                                  key: const ValueKey('signup'),
-                                  nameCtrl: _nameCtrl,
-                                  emailCtrl: _emailCtrl,
-                                  passwordCtrl: _passwordCtrl,
-                                  obscure: _obscure,
-                                  onToggleObscure: () =>
-                                      setState(() => _obscure = !_obscure),
-                                  loading: _loading,
-                                  onSubmit: _signUp,
-                                ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Divider ───────────────────────────────────────
-                        Row(
-                          children: [
-                            const Expanded(
-                                child: Divider(color: AppColors.divider)),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text('or',
-                                  style: AppTypography.bodySmall
-                                      .copyWith(color: AppColors.textHint)),
-                            ),
-                            const Expanded(
-                                child: Divider(color: AppColors.divider)),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
                         // ── Google button ──────────────────────────────────
                         AnimatedTap(
                           onTap: _loading ? null : _signInGoogle,
@@ -423,23 +310,40 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                 ),
                               ],
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Google "G" logo via coloured text
-                                const _GoogleG(),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Continue with Google',
-                                  style: AppTypography.labelLarge.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                    fontSize: 15,
+                            child: _loading
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2.4),
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const _GoogleG(),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Continue with Google',
+                                        style: AppTypography.labelLarge.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
                           ),
+                        ),
+
+                        const SizedBox(height: 20),
+                        Text(
+                          'By continuing, you agree to our Terms of Service '
+                          'and Privacy Policy.',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textHint, fontSize: 12),
                         ),
                       ],
                     ),
@@ -449,60 +353,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Pill tab ──────────────────────────────────────────────────────────────────
-
-class _PillTab extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _PillTab(
-      {required this.label, required this.active, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: AnimatedTap(
-        onTap: onTap,
-        haptic: false,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            color: active ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : [],
-          ),
-          child: Center(
-            child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight:
-                    active ? FontWeight.w600 : FontWeight.w400,
-                color: active
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
-              ),
-              child: Text(label),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -567,130 +417,4 @@ class _GoogleGPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter old) => false;
-}
-
-// ─── Sign-In Form ──────────────────────────────────────────────────────────────
-
-class _SignInForm extends StatelessWidget {
-  final TextEditingController emailCtrl;
-  final TextEditingController passwordCtrl;
-  final bool obscure;
-  final VoidCallback onToggleObscure;
-  final bool loading;
-  final VoidCallback onSubmit;
-  final VoidCallback onForgot;
-
-  const _SignInForm({
-    super.key,
-    required this.emailCtrl,
-    required this.passwordCtrl,
-    required this.obscure,
-    required this.onToggleObscure,
-    required this.loading,
-    required this.onSubmit,
-    required this.onForgot,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        NsTextField(
-          controller: emailCtrl,
-          label: 'Email',
-          hint: 'you@example.com',
-          keyboardType: TextInputType.emailAddress,
-          prefixIcon: Icons.email_outlined,
-        ),
-        const SizedBox(height: 14),
-        NsTextField(
-          controller: passwordCtrl,
-          label: 'Password',
-          hint: '••••••••',
-          obscureText: obscure,
-          prefixIcon: Icons.lock_outline,
-          suffixIcon: obscure
-              ? Icons.visibility_outlined
-              : Icons.visibility_off_outlined,
-          onSuffixTap: onToggleObscure,
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: loading ? null : onForgot,
-            style: TextButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 4, vertical: 8)),
-            child: const Text('Forgot password?',
-                style: TextStyle(fontSize: 13)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        NsButton(
-            label: 'Sign In', loading: loading, onPressed: onSubmit),
-      ],
-    );
-  }
-}
-
-// ─── Sign-Up Form ──────────────────────────────────────────────────────────────
-
-class _SignUpForm extends StatelessWidget {
-  final TextEditingController nameCtrl;
-  final TextEditingController emailCtrl;
-  final TextEditingController passwordCtrl;
-  final bool obscure;
-  final VoidCallback onToggleObscure;
-  final bool loading;
-  final VoidCallback onSubmit;
-
-  const _SignUpForm({
-    super.key,
-    required this.nameCtrl,
-    required this.emailCtrl,
-    required this.passwordCtrl,
-    required this.obscure,
-    required this.onToggleObscure,
-    required this.loading,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        NsTextField(
-          controller: nameCtrl,
-          label: 'Full Name',
-          hint: 'Jane Doe',
-          prefixIcon: Icons.person_outline,
-        ),
-        const SizedBox(height: 14),
-        NsTextField(
-          controller: emailCtrl,
-          label: 'Email',
-          hint: 'you@example.com',
-          keyboardType: TextInputType.emailAddress,
-          prefixIcon: Icons.email_outlined,
-        ),
-        const SizedBox(height: 14),
-        NsTextField(
-          controller: passwordCtrl,
-          label: 'Password',
-          hint: '6+ characters',
-          obscureText: obscure,
-          prefixIcon: Icons.lock_outline,
-          suffixIcon: obscure
-              ? Icons.visibility_outlined
-              : Icons.visibility_off_outlined,
-          onSuffixTap: onToggleObscure,
-        ),
-        const SizedBox(height: 24),
-        NsButton(
-            label: 'Create Account', loading: loading, onPressed: onSubmit),
-      ],
-    );
-  }
 }

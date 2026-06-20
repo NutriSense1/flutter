@@ -2,11 +2,14 @@ class AppConstants {
   AppConstants._();
 
   // API
-  // ⚠️ Replace with YOUR actual Render deployment URL after deploying
-  // the backend (see nutrisense-backend/README.md). Render gives you
-  // this URL once the service finishes its first deploy, e.g.
-  // https://nutrisense-api-xxxx.onrender.com
-  static const String baseUrl = 'https://nutrisense-api.onrender.com';
+  // Render deployment URL. NOTE: the FastAPI backend mounts every route
+  // under the `/api/v1` prefix (see backend/app/core/config.py ->
+  // api_v1_prefix and backend/app/main.py -> app.include_router(...,
+  // prefix=prefix)) — only the bare `/` and `/health` routes are
+  // unprefixed. That prefix MUST be included here, or every request
+  // from ApiService (which appends paths like `/users/onboarding`)
+  // 404s against the backend.
+  static const String baseUrl = 'https://nutrisense-api-qdjj.onrender.com/api/v1';
   static const String openFoodFactsUrl = 'https://world.openfoodfacts.org/api/v3';
 
   // Storage keys

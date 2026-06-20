@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
@@ -14,15 +15,21 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $message (status: $statusCode)';
 }
 
-/// Thrown specifically on 401s so the app can route back to sign-in
-/// rather than showing a generic error.
-class UnauthorizedException extends ApiException {
-  UnauthorizedException() : super('Session expired. Please sign in again.', 401);
+/// Thrown when a request exceeds [AppConstants.requestTimeoutSeconds].
+/// Surfaced separately from [ApiException] so callers can show a
+/// "server may be waking up" message instead of a generic error —
+/// this is the most common failure mode on Render's free tier, where
+/// a cold instance can take 30-60s to respond to the first request.
+class ApiTimeoutException implements Exception {
+  @override
+  String toString() => 'Request timed out';
 }
 
 class ApiService {
   final http.Client _client;
   final AuthService _authService;
+
+  static const _timeout = Duration(seconds: AppConstants.requestTimeoutSeconds);
 
   ApiService({http.Client? client, AuthService? authService})
       : _client = client ?? http.Client(),
@@ -40,13 +47,41 @@ class ApiService {
     };
   }
 
+  // ─── Low-level HTTP helpers ─────────────────────────────────────────────
+  //
+  // Every request goes through one of these so a timeout is *always*
+  // applied — a bare `http` call has no timeout by default and will hang
+  // indefinitely if the backend is unreachable or waking from a cold
+  // start, which left the UI stuck with no feedback.
+
+  Future<http.Response> _get(Uri uri) async {
+    return _wrap(_client.get(uri, headers: await _headers()));
+  }
+
+  Future<http.Response> _post(Uri uri, {Object? body}) async {
+    return _wrap(_client.post(uri, headers: await _headers(), body: body));
+  }
+
+  Future<http.Response> _patch(Uri uri, {Object? body}) async {
+    return _wrap(_client.patch(uri, headers: await _headers(), body: body));
+  }
+
+  Future<http.Response> _delete(Uri uri) async {
+    return _wrap(_client.delete(uri, headers: await _headers()));
+  }
+
+  Future<http.Response> _wrap(Future<http.Response> request) async {
+    try {
+      return await request.timeout(_timeout);
+    } on TimeoutException {
+      throw ApiTimeoutException();
+    }
+  }
+
   Future<dynamic> _handleResponse(http.Response response) async {
     final body = response.body.isNotEmpty ? jsonDecode(response.body) : null;
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
-    }
-    if (response.statusCode == 401) {
-      throw UnauthorizedException();
     }
     final message = body is Map && body['detail'] != null
         ? body['detail'].toString()
@@ -61,16 +96,21 @@ class ApiService {
     String? mealType,
   }) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/scan');
-    final response = await _client
-        .post(
-          uri,
-          headers: await _headers(),
-          body: jsonEncode({
-            'image_base64': imageBase64,
-            'meal_type': mealType,
-          }),
-        )
-        .timeout(const Duration(seconds: AppConstants.scanTimeoutSeconds));
+    http.Response response;
+    try {
+      response = await _client
+          .post(
+            uri,
+            headers: await _headers(),
+            body: jsonEncode({
+              'image_base64': imageBase64,
+              'meal_type': mealType,
+            }),
+          )
+          .timeout(const Duration(seconds: AppConstants.scanTimeoutSeconds));
+    } on TimeoutException {
+      throw ApiTimeoutException();
+    }
     final json = await _handleResponse(response);
     return ScanResultModel.fromJson(json as Map<String, dynamic>);
   }
@@ -79,11 +119,7 @@ class ApiService {
 
   Future<UserModel> completeOnboarding(Map<String, dynamic> onboardingData) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/users/onboarding');
-    final response = await _client.post(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode(onboardingData),
-    );
+    final response = await _post(uri, body: jsonEncode(onboardingData));
     final json = await _handleResponse(response);
     return UserModel.fromJson(json as Map<String, dynamic>);
   }
@@ -92,18 +128,14 @@ class ApiService {
 
   Future<UserModel> getProfile() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/users/me');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     final json = await _handleResponse(response);
     return UserModel.fromJson(json as Map<String, dynamic>);
   }
 
   Future<UserModel> updateProfile(Map<String, dynamic> updates) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/users/me');
-    final response = await _client.patch(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode(updates),
-    );
+    final response = await _patch(uri, body: jsonEncode(updates));
     final json = await _handleResponse(response);
     return UserModel.fromJson(json as Map<String, dynamic>);
   }
@@ -113,19 +145,19 @@ class ApiService {
   Future<List<dynamic>> getFoodLogs({DateTime? date}) async {
     final query = date != null ? '?date=${date.toIso8601String().split('T')[0]}' : '';
     final uri = Uri.parse('${AppConstants.baseUrl}/food-logs$query');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     return await _handleResponse(response) as List<dynamic>;
   }
 
   Future<Map<String, dynamic>> createFoodLog(Map<String, dynamic> log) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/food-logs');
-    final response = await _client.post(uri, headers: await _headers(), body: jsonEncode(log));
+    final response = await _post(uri, body: jsonEncode(log));
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
   Future<void> deleteFoodLog(String id) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/food-logs/$id');
-    final response = await _client.delete(uri, headers: await _headers());
+    final response = await _delete(uri);
     await _handleResponse(response);
   }
 
@@ -133,15 +165,14 @@ class ApiService {
 
   Future<List<dynamic>> getWeightLogs({int days = 30}) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/weight-logs?days=$days');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     return await _handleResponse(response) as List<dynamic>;
   }
 
   Future<Map<String, dynamic>> logWeight(double weightKg, {String? note}) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/weight-logs');
-    final response = await _client.post(
+    final response = await _post(
       uri,
-      headers: await _headers(),
       body: jsonEncode({'weight_kg': weightKg, 'note': note}),
     );
     return await _handleResponse(response) as Map<String, dynamic>;
@@ -151,9 +182,8 @@ class ApiService {
 
   Future<Map<String, dynamic>> logWater(double liters) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/water-logs');
-    final response = await _client.post(
+    final response = await _post(
       uri,
-      headers: await _headers(),
       body: jsonEncode({'amount_liters': liters}),
     );
     return await _handleResponse(response) as Map<String, dynamic>;
@@ -161,7 +191,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getTodayWater() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/water-logs/today');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
@@ -174,9 +204,8 @@ class ApiService {
     required DateTime date,
   }) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/step-logs/sync');
-    final response = await _client.post(
+    final response = await _post(
       uri,
-      headers: await _headers(),
       body: jsonEncode({
         'steps': steps,
         'distance_km': distanceKm,
@@ -191,17 +220,13 @@ class ApiService {
 
   Future<Map<String, dynamic>> getDailyReview() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/ai/daily-review');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
   Future<String> askCoach(String message) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/ai/coach/chat');
-    final response = await _client.post(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode({'message': message}),
-    );
+    final response = await _post(uri, body: jsonEncode({'message': message}));
     final json = await _handleResponse(response) as Map<String, dynamic>;
     return json['reply'] as String;
   }
@@ -210,7 +235,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> getWeeklyReport() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/analytics/weekly');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
@@ -218,7 +243,7 @@ class ApiService {
 
   Future<List<dynamic>> getAchievements() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/achievements');
-    final response = await _client.get(uri, headers: await _headers());
+    final response = await _get(uri);
     return await _handleResponse(response) as List<dynamic>;
   }
 

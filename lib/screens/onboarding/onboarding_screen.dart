@@ -8,6 +8,8 @@ import '../../core/router/app_router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/widgets/animations/animated_tap.dart';
 import '../../core/widgets/animations/fade_slide.dart';
+import '../../core/utils/nutrition_calculator.dart';
+import '../../models/onboarding_model.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -24,7 +26,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     with SingleTickerProviderStateMixin {
   final _pageCtrl = PageController();
   int _page = 0;
-  final int _total = 10;
+  final int _total = 11;
   bool _submitting = false;
   String? _submitError;
 
@@ -55,7 +57,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       _animateProgress(_page + 1);
       HapticFeedback.lightImpact();
       _pageCtrl.nextPage(
-          duration: const Duration(milliseconds: 380),
+          duration: const Duration(milliseconds: 460),
           curve: Curves.easeOutCubic);
     } else {
       _submit();
@@ -85,7 +87,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   Future<void> _submit() async {
     final data = ref.read(onboardingProvider);
     if (!data.isComplete) {
-      setState(() => _submitError = 'Please complete all steps.');
+      setState(() => _submitError = _describeMissing(data));
       return;
     }
     setState(() { _submitting = true; _submitError = null; });
@@ -99,7 +101,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         'weight_kg': data.weightKg,
         'goal_weight_kg': data.goalWeightKg,
         'activity_level': data.activityLevel,
-        'goal': data.goal,
+        'goal': data.primaryGoal,
         'dietary_preferences': data.dietaryPreferences,
         'allergies': data.allergies,
         'water_goal_liters': data.waterGoalLiters,
@@ -108,11 +110,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
       ref.read(onboardingProvider.notifier).reset();
       if (!mounted) return;
       context.go(AppRoutes.home);
+    } on ApiTimeoutException {
+      setState(() => _submitError =
+          "Couldn't reach the server — it may be waking up. Please try again in a few seconds.");
     } on ApiException catch (e) {
       setState(() => _submitError = e.message);
+    } catch (_) {
+      setState(() => _submitError = 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// Points at exactly what's missing instead of a blanket "fill all
+  /// fields" — this should basically never fire now that every step
+  /// commits a value as soon as it's shown, but it's a much better
+  /// fallback than a dead-end message if it ever does.
+  String _describeMissing(OnboardingData data) {
+    final missing = <String>[];
+    if (data.name == null || data.name!.trim().isEmpty) missing.add('name');
+    if (data.age == null) missing.add('age');
+    if (data.gender == null) missing.add('biological sex');
+    if (data.heightCm == null) missing.add('height');
+    if (data.weightKg == null) missing.add('weight');
+    if (data.goalWeightKg == null) missing.add('goal weight');
+    if (data.activityLevel == null) missing.add('activity level');
+    if (data.goals.isEmpty) missing.add('at least one goal');
+    if (missing.isEmpty) return 'Please complete all steps.';
+    return 'Just need ${missing.join(', ')} before we can finish setting up your plan.';
   }
 
   @override
@@ -246,7 +271,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                   _GoalPage(onNext: _next),
                   _GoalWeightPage(onNext: _next),
                   _DietaryPage(onNext: _next),
-                  _AllergiesPage(onNext: _next, loading: _submitting),
+                  _AllergiesPage(onNext: _next),
+                  _PlanSummaryPage(onNext: _next, loading: _submitting),
                 ],
               ),
             ),
@@ -287,17 +313,17 @@ class _PageShell extends StatelessWidget {
         children: [
           const SizedBox(height: 28),
           FadeSlide(
-            delay: const Duration(milliseconds: 40),
+            delay: const Duration(milliseconds: 60),
             child: Text(emoji, style: const TextStyle(fontSize: 44)),
           ),
           const SizedBox(height: 16),
           FadeSlide(
-            delay: const Duration(milliseconds: 100),
+            delay: const Duration(milliseconds: 130),
             child: Text(title, style: AppTypography.headlineLarge),
           ),
           const SizedBox(height: 8),
           FadeSlide(
-            delay: const Duration(milliseconds: 140),
+            delay: const Duration(milliseconds: 190),
             child: Text(subtitle,
                 style: AppTypography.bodyLarge
                     .copyWith(color: AppColors.textSecondary)),
@@ -305,12 +331,12 @@ class _PageShell extends StatelessWidget {
           const SizedBox(height: 28),
           Expanded(
             child: FadeSlide(
-              delay: const Duration(milliseconds: 200),
+              delay: const Duration(milliseconds: 260),
               child: SingleChildScrollView(child: child),
             ),
           ),
           FadeSlide(
-            delay: const Duration(milliseconds: 60),
+            delay: const Duration(milliseconds: 90),
             child: NsButton(
                 label: nextLabel, onPressed: onNext, loading: loading),
           ),
@@ -528,12 +554,9 @@ class _WelcomePage extends StatelessWidget {
             child: Container(
               width: 76,
               height: 76,
+              padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF34D47A), Color(0xFF0F9D58)],
-                ),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -543,8 +566,10 @@ class _WelcomePage extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.restaurant_menu_rounded,
-                  color: Colors.white, size: 40),
+              child: Image.asset(
+                'assets/images/logo_icon.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const SizedBox(height: 28),
@@ -617,22 +642,44 @@ class _FeatureRow extends StatelessWidget {
   }
 }
 
-class _NamePage extends ConsumerWidget {
+class _NamePage extends ConsumerStatefulWidget {
   final VoidCallback onNext;
   const _NamePage({required this.onNext});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ctrl =
-        TextEditingController(text: ref.read(onboardingProvider).name ?? '');
+  ConsumerState<_NamePage> createState() => _NamePageState();
+}
+
+class _NamePageState extends ConsumerState<_NamePage> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-filled from the Google account or the sign-up form's name
+    // field when available, so this step usually just needs a confirm.
+    _ctrl = TextEditingController(text: ref.read(onboardingProvider).name ?? '');
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final prefilled = _ctrl.text.trim().isNotEmpty;
     return _PageShell(
       emoji: '👋',
       title: "What's your name?",
-      subtitle: "We'll personalise everything just for you.",
-      onNext: onNext,
+      subtitle: prefilled
+          ? "We grabbed this from your account — edit it if you'd like."
+          : "We'll personalise everything just for you.",
+      onNext: widget.onNext,
       child: TextField(
-        controller: ctrl,
-        autofocus: true,
+        controller: _ctrl,
+        autofocus: !prefilled,
         style: AppTypography.headlineMedium,
         decoration: InputDecoration(
           hintText: 'Your name',
@@ -662,6 +709,12 @@ class _AgePageState extends ConsumerState<_AgePage> {
   void initState() {
     super.initState();
     _age = ref.read(onboardingProvider).age ?? 25;
+    // The slider already shows this value as "chosen" — commit it to
+    // the provider even if the user never touches the slider, otherwise
+    // age stays null and the final step wrongly says it's incomplete.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(onboardingProvider.notifier).updateAge(_age);
+    });
   }
 
   @override
@@ -750,6 +803,14 @@ class _HWState extends ConsumerState<_HeightWeightPage> {
     final d = ref.read(onboardingProvider);
     _h = d.heightCm ?? 170;
     _w = d.weightKg ?? 70;
+    // Same fix as age: commit the slider's starting values even if the
+    // user accepts the defaults without dragging either slider.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(onboardingProvider.notifier)
+        ..updateHeight(_h)
+        ..updateWeight(_w);
+    });
   }
 
   @override
@@ -832,9 +893,11 @@ class _GoalPage extends ConsumerWidget {
   final VoidCallback onNext;
   const _GoalPage({required this.onNext});
 
+  static const _maxGoals = 3;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(onboardingProvider).goal;
+    final selected = ref.watch(onboardingProvider).goals;
     final icons = {
       'Lose Weight': '🔥', 'Maintain Weight': '⚖️', 'Gain Weight': '📈',
       'Build Muscle': '💪', 'Improve Health': '❤️', 'Eat Healthier': '🥗',
@@ -842,18 +905,29 @@ class _GoalPage extends ConsumerWidget {
     return _PageShell(
       emoji: '🎯',
       title: "What's your goal?",
-      subtitle: "We'll tailor your calorie and macro targets.",
+      subtitle: selected.isEmpty
+          ? 'Select up to $_maxGoals — your first pick sets your calorie target.'
+          : '${selected.length}/$_maxGoals selected — "${selected.first}" sets your calorie target.',
       onNext: onNext,
       child: Column(
         children: AppConstants.goals.map((g) {
+          final isOn = selected.contains(g);
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _SelectCard(
               label: g,
               icon: icons[g],
-              selected: selected == g,
-              onTap: () =>
-                  ref.read(onboardingProvider.notifier).updateGoal(g),
+              selected: isOn,
+              onTap: () {
+                if (!isOn && selected.length >= _maxGoals) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('You can select up to $_maxGoals goals.'),
+                    duration: const Duration(milliseconds: 1500),
+                  ));
+                  return;
+                }
+                ref.read(onboardingProvider.notifier).toggleGoal(g);
+              },
             ),
           );
         }).toList(),
@@ -878,6 +952,11 @@ class _GWState extends ConsumerState<_GoalWeightPage> {
     super.initState();
     _gw = ref.read(onboardingProvider).goalWeightKg ??
         ref.read(onboardingProvider).weightKg ?? 65;
+    // Same fix as age/height/weight: commit the default so accepting it
+    // without touching the slider still counts as answered.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(onboardingProvider.notifier).updateGoalWeight(_gw);
+    });
   }
 
   @override
@@ -952,8 +1031,7 @@ class _DietaryPage extends ConsumerWidget {
 
 class _AllergiesPage extends ConsumerWidget {
   final VoidCallback onNext;
-  final bool loading;
-  const _AllergiesPage({required this.onNext, this.loading = false});
+  const _AllergiesPage({required this.onNext});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -963,8 +1041,6 @@ class _AllergiesPage extends ConsumerWidget {
       title: 'Any allergies?',
       subtitle: "We'll warn you when allergens are detected.",
       onNext: onNext,
-      nextLabel: 'Finish Setup',
-      loading: loading,
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -996,6 +1072,179 @@ class _AllergiesPage extends ConsumerWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+// ─── Plan Summary (final step) ───────────────────────────────────────────────
+//
+// Closes out onboarding by actually showing the person what all those
+// questions were for — their computed calorie/macro targets — instead of
+// just submitting silently. This is also where the real submission happens
+// ("Start Tracking" calls onNext, which is the last page so _next() routes
+// straight into _submit()).
+//
+// IMPORTANT: PageView(children: [...]) builds every page eagerly, so this
+// widget's build() runs once as soon as onboarding opens — long before the
+// user has filled anything in. Every value below falls back to a sane
+// default rather than null-asserting, or this page would crash onboarding
+// on load.
+class _PlanSummaryPage extends ConsumerWidget {
+  final VoidCallback onNext;
+  final bool loading;
+  const _PlanSummaryPage({required this.onNext, this.loading = false});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(onboardingProvider);
+
+    final double weight = data.weightKg ?? 70.0;
+    final double height = data.heightCm ?? 170.0;
+    final int age = data.age ?? 25;
+    final gender = data.gender ?? 'Male';
+    final activity = data.activityLevel ?? 'Sedentary';
+    final goal = data.primaryGoal ?? 'Maintain Weight';
+    final double goalWeight = data.goalWeightKg ?? weight;
+    final firstName = (data.name ?? '').trim().split(' ').first;
+
+    final bmr = NutritionCalculator.calculateBMR(
+        weightKg: weight, heightCm: height, age: age, gender: gender);
+    final tdee = NutritionCalculator.calculateTDEE(bmr, activity);
+    final calories = NutritionCalculator.calculateDailyCalories(tdee, goal);
+    final protein = NutritionCalculator.calculateProteinTarget(weight, goal);
+    final macros = NutritionCalculator.calculateMacroCalories(
+        totalCalories: calories, proteinG: protein);
+    final carbs = NutritionCalculator.carbsFromCalories(macros['carbs']!);
+    final fat = NutritionCalculator.fatFromCalories(macros['fat']!);
+    final weeks =
+        NutritionCalculator.estimateWeeksToGoal(weight, goalWeight);
+
+    final hasRealGoalGap =
+        goal != 'Maintain Weight' && (goalWeight - weight).abs() >= 0.5;
+
+    return _PageShell(
+      emoji: '✨',
+      title: firstName.isNotEmpty
+          ? '$firstName, your plan is ready'
+          : 'Your plan is ready',
+      subtitle: hasRealGoalGap
+          ? "Built from your stats — at a safe ~0.5 kg/week pace, you'll reach ${goalWeight.toStringAsFixed(0)} kg in about $weeks weeks."
+          : "Built from your stats and activity level — here's what we recommend daily.",
+      onNext: onNext,
+      nextLabel: 'Start Tracking',
+      loading: loading,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 26),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF34D47A), Color(0xFF0F9D58)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.25),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text('${calories.round()}',
+                    style: AppTypography.numericLarge
+                        .copyWith(color: Colors.white, fontSize: 48)),
+                const SizedBox(height: 4),
+                Text('calories / day',
+                    style: AppTypography.bodyMedium
+                        .copyWith(color: Colors.white.withOpacity(0.85))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _MacroStatCard(
+                    label: 'Protein', grams: protein, color: AppColors.protein),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MacroStatCard(
+                    label: 'Carbs', grams: carbs, color: AppColors.carbs),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MacroStatCard(
+                    label: 'Fat', grams: fat, color: AppColors.fat),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    size: 18, color: AppColors.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'These targets adjust automatically as you log meals and track progress — nothing here is locked in.',
+                    style: AppTypography.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MacroStatCard extends StatelessWidget {
+  final String label;
+  final double grams;
+  final Color color;
+  const _MacroStatCard({
+    required this.label,
+    required this.grams,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(height: 8),
+          Text('${grams.round()}g', style: AppTypography.titleLarge),
+          const SizedBox(height: 2),
+          Text(label, style: AppTypography.labelSmall),
+        ],
       ),
     );
   }

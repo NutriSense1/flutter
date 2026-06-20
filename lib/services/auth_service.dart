@@ -10,14 +10,18 @@ class AuthException implements Exception {
 }
 
 /// Wraps FirebaseAuth so the rest of the app never touches the SDK
-/// directly. Converts FirebaseAuthException codes into readable
-/// messages for display in the UI.
+/// directly. Google Sign-In is the ONLY auth method this app supports —
+/// there is no email/password path. Converts FirebaseAuthException
+/// codes into readable messages for display in the UI.
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // The serverClientId (web client ID) is required on Android so that
   // GoogleSignIn can return an idToken that Firebase Auth can verify.
-  // On iOS and Web it is optional but harmless to include.
+  // On iOS and Web it is optional but harmless to include. This value
+  // comes from android/app/google-services.json -> oauth_client with
+  // client_type 3 (the "Web client" Firebase auto-creates alongside
+  // the Android client) — it must stay in sync with that file.
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     serverClientId:
         '750499933497-fii0h4v4f8gd7nv5fo8ulvq1nm1b09nn.apps.googleusercontent.com',
@@ -35,30 +39,9 @@ class AuthService {
     return await user.getIdToken();
   }
 
-  Future<User> signUpWithEmail(String email, String password) async {
-    try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return credential.user!;
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(_mapErrorCode(e.code));
-    }
-  }
-
-  Future<User> signInWithEmail(String email, String password) async {
-    try {
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return credential.user!;
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(_mapErrorCode(e.code));
-    }
-  }
-
+  /// The only sign-in path in this app. Returns null if the user
+  /// cancels the account picker (not an error — callers should treat
+  /// that as a silent no-op, not show an error banner).
   Future<User?> signInWithGoogle() async {
     try {
       // Web uses Firebase's built-in popup flow; mobile uses the
@@ -113,14 +96,6 @@ class AuthService {
     }
   }
 
-  Future<void> sendPasswordResetEmail(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(_mapErrorCode(e.code));
-    }
-  }
-
   Future<void> signOut() async {
     await Future.wait([
       _auth.signOut(),
@@ -130,20 +105,20 @@ class AuthService {
 
   String _mapErrorCode(String code) {
     switch (code) {
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'invalid-email':
-        return 'That email address looks invalid.';
-      case 'weak-password':
-        return 'Password should be at least 6 characters.';
-      case 'user-not-found':
-      case 'wrong-password':
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with the same email but a '
+            'different sign-in method.';
       case 'invalid-credential':
-        return 'Incorrect email or password.';
+        return 'That Google sign-in could not be verified. Please try again.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
       case 'too-many-requests':
         return 'Too many attempts. Please try again later.';
       case 'network-request-failed':
         return 'Network error. Check your connection.';
+      case 'popup-closed-by-user':
+      case 'cancelled-popup-request':
+        return 'Sign-in was cancelled.';
       default:
         return 'Something went wrong. Please try again.';
     }

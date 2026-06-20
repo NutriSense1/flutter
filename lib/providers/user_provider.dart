@@ -59,8 +59,8 @@ class UserNotifier extends StateNotifier<UserModel?> {
       gender: data.gender!,
     );
     final tdee = NutritionCalculator.calculateTDEE(bmr, data.activityLevel!);
-    final dailyCalories = NutritionCalculator.calculateDailyCalories(tdee, data.goal!);
-    final dailyProtein = NutritionCalculator.calculateProteinTarget(data.weightKg!, data.goal!);
+    final dailyCalories = NutritionCalculator.calculateDailyCalories(tdee, data.primaryGoal!);
+    final dailyProtein = NutritionCalculator.calculateProteinTarget(data.weightKg!, data.primaryGoal!);
     final macros = NutritionCalculator.calculateMacroCalories(
       totalCalories: dailyCalories,
       proteinG: dailyProtein,
@@ -76,7 +76,7 @@ class UserNotifier extends StateNotifier<UserModel?> {
       weightKg: data.weightKg!,
       goalWeightKg: data.goalWeightKg!,
       activityLevel: data.activityLevel!,
-      goal: data.goal!,
+      goal: data.primaryGoal!,
       dietaryPreferences: data.dietaryPreferences,
       allergies: data.allergies,
       waterGoalLiters: data.waterGoalLiters,
@@ -106,7 +106,22 @@ class OnboardingNotifier extends StateNotifier<OnboardingData> {
   void updateWeight(double weight) => state = state.copyWith(weightKg: weight);
   void updateGoalWeight(double goalWeight) => state = state.copyWith(goalWeightKg: goalWeight);
   void updateActivityLevel(String level) => state = state.copyWith(activityLevel: level);
-  void updateGoal(String goal) => state = state.copyWith(goal: goal);
+
+  /// Toggles a goal on/off. Capped at 3 selections — the first one picked
+  /// becomes the "primary" goal used for calorie/macro math, the rest are
+  /// kept for personalization. The UI also enforces the cap (and tells the
+  /// user why), this is just a safety net.
+  void toggleGoal(String goal) {
+    final list = List<String>.from(state.goals);
+    if (list.contains(goal)) {
+      list.remove(goal);
+    } else {
+      if (list.length >= 3) return;
+      list.add(goal);
+    }
+    state = state.copyWith(goals: list);
+  }
+
   void updateWaterGoal(double liters) => state = state.copyWith(waterGoalLiters: liters);
 
   void toggleDietaryPreference(String pref) {

@@ -1,11 +1,11 @@
 {
-    "name": "nutrisense",
-    "short_name": "nutrisense",
+    "name": "NutriSense",
+    "short_name": "NutriSense",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0C3018",
+    "theme_color": "#0F9D58",
+    "description": "NutriSense \u2014 Know what you eat. AI-powered nutrition tracking.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

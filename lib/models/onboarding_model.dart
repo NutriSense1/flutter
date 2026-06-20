@@ -6,7 +6,12 @@ class OnboardingData {
   final double? weightKg;
   final double? goalWeightKg;
   final String? activityLevel;
-  final String? goal;
+
+  /// Up to 3 goals the user picked, in selection order. The backend's
+  /// calorie/macro math is built around a single primary goal, so
+  /// [primaryGoal] (the first one picked) is what actually drives the
+  /// numbers — the rest are just for personalization/display.
+  final List<String> goals;
   final List<String> dietaryPreferences;
   final List<String> allergies;
   final double waterGoalLiters;
@@ -19,11 +24,13 @@ class OnboardingData {
     this.weightKg,
     this.goalWeightKg,
     this.activityLevel,
-    this.goal,
+    this.goals = const [],
     this.dietaryPreferences = const [],
     this.allergies = const [],
     this.waterGoalLiters = 2.5,
   });
+
+  String? get primaryGoal => goals.isNotEmpty ? goals.first : null;
 
   OnboardingData copyWith({
     String? name,
@@ -33,7 +40,7 @@ class OnboardingData {
     double? weightKg,
     double? goalWeightKg,
     String? activityLevel,
-    String? goal,
+    List<String>? goals,
     List<String>? dietaryPreferences,
     List<String>? allergies,
     double? waterGoalLiters,
@@ -46,7 +53,7 @@ class OnboardingData {
       weightKg: weightKg ?? this.weightKg,
       goalWeightKg: goalWeightKg ?? this.goalWeightKg,
       activityLevel: activityLevel ?? this.activityLevel,
-      goal: goal ?? this.goal,
+      goals: goals ?? this.goals,
       dietaryPreferences: dietaryPreferences ?? this.dietaryPreferences,
       allergies: allergies ?? this.allergies,
       waterGoalLiters: waterGoalLiters ?? this.waterGoalLiters,
@@ -55,11 +62,12 @@ class OnboardingData {
 
   bool get isComplete =>
       name != null &&
+      name!.trim().isNotEmpty &&
       age != null &&
       gender != null &&
       heightCm != null &&
       weightKg != null &&
       goalWeightKg != null &&
       activityLevel != null &&
-      goal != null;
+      goals.isNotEmpty;
 }
