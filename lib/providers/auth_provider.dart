@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'user_provider.dart';
 
 /// Singleton service instances, shared across the whole app.
@@ -9,6 +10,10 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 
 final apiServiceProvider = Provider<ApiService>((ref) {
   return ApiService(authService: ref.watch(authServiceProvider));
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService(ref.watch(apiServiceProvider));
 });
 
 /// Emits the current Firebase user whenever sign-in state changes.

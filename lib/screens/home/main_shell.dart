@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/router/app_router.dart';
+import '../../providers/auth_provider.dart';
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
+class _MainShellState extends ConsumerState<MainShell> with TickerProviderStateMixin {
   // FAB pulse animation
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseScale;
@@ -36,6 +38,26 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
     _pulseOpacity = Tween<double>(begin: 0.35, end: 0.0).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeIn));
+
+    // Fire-and-forget: requests push permission (if not already
+    // decided) and registers this device's FCM token with the backend.
+    // Runs every time MainShell mounts (fresh sign-in AND app reopen
+    // with an existing session both land here) — cheap no-op if the
+    // token hasn't changed since last registration.
+    final notifications = ref.read(notificationServiceProvider);
+    notifications.onForegroundMessage = (message) {
+      final title = message.notification?.title;
+      final body = message.notification?.body;
+      if (title == null || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(body != null ? '$title — $body' : title),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    };
+    notifications.initAfterSignIn();
   }
 
   @override
@@ -95,7 +117,7 @@ class _PremiumNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(

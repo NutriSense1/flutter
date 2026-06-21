@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -57,7 +56,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     setState(() => _isScanning = true);
 
     try {
-      final bytes = await File(picked.path).readAsBytes();
+      // XFile.readAsBytes() works on every platform (Android/iOS/Web).
+      // dart:io's File(picked.path) does NOT work on web — on web,
+      // picked.path is a blob: URL, not a real filesystem path, so
+      // File().readAsBytes() throws (or silently fails) there. This was
+      // why scanning — both gallery AND camera — was broken on web.
+      final bytes = await picked.readAsBytes();
       final base64Image = base64Encode(bytes);
 
       final api = ref.read(apiServiceProvider);

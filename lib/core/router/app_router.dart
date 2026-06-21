@@ -15,6 +15,13 @@ import '../../screens/coach/coach_screen.dart';
 import '../../screens/analytics/analytics_screen.dart';
 import '../../screens/gamification/achievements_screen.dart';
 import '../../screens/profile/profile_screen.dart';
+import '../../screens/settings/personal_details_screen.dart';
+import '../../screens/settings/goals_targets_screen.dart';
+import '../../screens/settings/dietary_preferences_screen.dart';
+import '../../screens/settings/notifications_screen.dart';
+import '../../screens/settings/appearance_screen.dart';
+import '../../screens/settings/privacy_security_screen.dart';
+import '../../screens/settings/help_support_screen.dart';
 import '../../models/scan_result_model.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -87,6 +94,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.achievements,
         pageBuilder: (c, s) => _slideUp(s.pageKey, const AchievementsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.personalDetails,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const PersonalDetailsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.goalsTargets,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const GoalsTargetsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.dietaryPreferences,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const DietaryPreferencesScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.notificationSettings,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const NotificationsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.appearance,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const AppearanceScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.privacySecurity,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const PrivacySecurityScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.helpSupport,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const HelpSupportScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -179,4 +214,11 @@ class AppRoutes {
   static const String weight = '/weight';
   static const String water = '/water';
   static const String achievements = '/achievements';
+  static const String personalDetails = '/settings/personal-details';
+  static const String goalsTargets = '/settings/goals-targets';
+  static const String dietaryPreferences = '/settings/dietary-preferences';
+  static const String notificationSettings = '/settings/notifications';
+  static const String appearance = '/settings/appearance';
+  static const String privacySecurity = '/settings/privacy-security';
+  static const String helpSupport = '/settings/help-support';
 }

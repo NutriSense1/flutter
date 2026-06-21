@@ -3,6 +3,11 @@
 <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 <uses-permission android:name="android.permission.INTERNET" />
+<!-- Required on Android 13+ (API 33) for the app to be able to request
+     notification permission and show pushes at all — without this,
+     FirebaseMessaging.requestPermission() silently does nothing on
+     Android 13+ devices. -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="NutriSense"
         android:name="${applicationName}"

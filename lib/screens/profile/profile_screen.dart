@@ -15,7 +15,7 @@ class ProfileScreen extends ConsumerWidget {
     final user = ref.watch(userProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Profile')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
@@ -125,20 +125,21 @@ class ProfileScreen extends ConsumerWidget {
 
             Text('Settings', style: AppTypography.titleLarge),
             const SizedBox(height: 12),
-            _SettingsTile(icon: Icons.person_outline, label: 'Personal Details', onTap: () {}),
-            _SettingsTile(icon: Icons.flag_outlined, label: 'Goals & Targets', onTap: () {}),
-            _SettingsTile(icon: Icons.restaurant_menu_outlined, label: 'Dietary Preferences', onTap: () {}),
+            _SettingsTile(icon: Icons.person_outline, label: 'Personal Details', onTap: () => context.push(AppRoutes.personalDetails)),
+            _SettingsTile(icon: Icons.flag_outlined, label: 'Goals & Targets', onTap: () => context.push(AppRoutes.goalsTargets)),
+            _SettingsTile(icon: Icons.restaurant_menu_outlined, label: 'Dietary Preferences', onTap: () => context.push(AppRoutes.dietaryPreferences)),
             _SettingsTile(icon: Icons.emoji_events_outlined, label: 'Achievements', onTap: () => context.push(AppRoutes.achievements)),
-            _SettingsTile(icon: Icons.notifications_outlined, label: 'Notifications', onTap: () {}),
-            _SettingsTile(icon: Icons.dark_mode_outlined, label: 'Appearance', onTap: () {}),
-            _SettingsTile(icon: Icons.lock_outline, label: 'Privacy & Security', onTap: () {}),
-            _SettingsTile(icon: Icons.help_outline, label: 'Help & Support', onTap: () {}),
+            _SettingsTile(icon: Icons.notifications_outlined, label: 'Notifications', onTap: () => context.push(AppRoutes.notificationSettings)),
+            _SettingsTile(icon: Icons.dark_mode_outlined, label: 'Appearance', onTap: () => context.push(AppRoutes.appearance)),
+            _SettingsTile(icon: Icons.lock_outline, label: 'Privacy & Security', onTap: () => context.push(AppRoutes.privacySecurity)),
+            _SettingsTile(icon: Icons.help_outline, label: 'Help & Support', onTap: () => context.push(AppRoutes.helpSupport)),
             const SizedBox(height: 12),
             _SettingsTile(
               icon: Icons.logout_rounded,
               label: 'Sign Out',
               color: AppColors.error,
               onTap: () async {
+                await ref.read(notificationServiceProvider).removeTokenOnSignOut();
                 await ref.read(authServiceProvider).signOut();
                 ref.read(userProvider.notifier).clearUser();
                 if (context.mounted) context.go(AppRoutes.auth);

@@ -31,7 +31,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final consistencyScore = logs.isEmpty ? 0 : ((logs.length / 21) * 100).clamp(0, 100).round();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Analytics'),
         actions: [

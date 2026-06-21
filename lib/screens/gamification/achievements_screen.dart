@@ -29,7 +29,7 @@ class AchievementsScreen extends ConsumerWidget {
         : ((xp - prevLevelXp) / (nextLevelXp - prevLevelXp)).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Achievements')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),

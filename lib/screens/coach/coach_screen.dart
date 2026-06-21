@@ -84,7 +84,7 @@ class _CoachScreenState extends ConsumerState<CoachScreen> {
     final streak = user?.currentStreak ?? 0;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('AI Coach'),
         actions: [

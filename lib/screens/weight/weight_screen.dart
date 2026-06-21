@@ -102,7 +102,7 @@ class _WeightScreenState extends ConsumerState<WeightScreen> {
     final estDate = DateTime.now().add(Duration(days: weeksToGoal * 7));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Weight Tracking')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),

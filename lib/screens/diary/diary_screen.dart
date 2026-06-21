@@ -22,7 +22,7 @@ class DiaryScreen extends ConsumerWidget {
     final user = ref.watch(userProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Food Diary'),
         actions: [

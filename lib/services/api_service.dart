@@ -247,5 +247,65 @@ class ApiService {
     return await _handleResponse(response) as List<dynamic>;
   }
 
+  // ─── Notifications / Push ───────────────────────────────────────────────────
+
+  Future<void> registerDeviceToken(String token, String platform) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications/device-token');
+    final response = await _post(
+      uri,
+      body: jsonEncode({'token': token, 'platform': platform}),
+    );
+    await _handleResponse(response);
+  }
+
+  Future<void> removeDeviceToken(String token) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications/device-token');
+    final response = await _wrap(_client.delete(
+      uri,
+      headers: await _headers(),
+      body: jsonEncode({'token': token}),
+    ));
+    if (response.statusCode != 204) await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getNotificationPreferences() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications/preferences');
+    final response = await _get(uri);
+    return await _handleResponse(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateNotificationPreferences(
+      Map<String, bool> updates) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications/preferences');
+    final response = await _patch(uri, body: jsonEncode(updates));
+    return await _handleResponse(response) as Map<String, dynamic>;
+  }
+
+  Future<List<dynamic>> getNotifications({int limit = 50}) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications?limit=$limit');
+    final response = await _get(uri);
+    return await _handleResponse(response) as List<dynamic>;
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications/read-all');
+    final response = await _post(uri);
+    await _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> sendTestPush() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/notifications/test-push');
+    final response = await _post(uri);
+    return await _handleResponse(response) as Map<String, dynamic>;
+  }
+
+  // ─── Account ────────────────────────────────────────────────────────────────
+
+  Future<void> deleteAccount() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/users/me');
+    final response = await _delete(uri);
+    if (response.statusCode != 204) await _handleResponse(response);
+  }
+
   void dispose() => _client.close();
 }
