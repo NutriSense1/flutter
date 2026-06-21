@@ -29,23 +29,24 @@ dependencies:
   google_sign_in: ^6.2.1
 
   # Camera & Images
-  camera: ^0.11.0+2
+  # NOTE: image_picker (below) is what's actually used for scanning —
+  # it handles both gallery selection and camera capture, and works on
+  # web (unlike the `camera` package, which also requires a much newer
+  # Android minSdk than this project targets and isn't referenced
+  # anywhere in this codebase). Same story for `health` and
+  # `permission_handler` — removed: not imported anywhere, and `health`
+  # specifically forces minSdkVersion 26 via its Android manifest,
+  # which broke `flutter build apk --release` for no actual feature.
   image_picker: ^1.1.2
 
   # Local storage
   shared_preferences: ^2.2.3
-
-  # Health data
-  health: ^11.0.0
 
   # UI utilities
   cupertino_icons: ^1.0.6
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
   lottie: ^3.1.2
-
-  # Permissions
-  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
