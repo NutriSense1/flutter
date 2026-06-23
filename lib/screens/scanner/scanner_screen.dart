@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,11 +47,31 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   Future<void> _capture(ImageSource source) async {
     setState(() => _errorMessage = null);
 
-    final XFile? picked = await _picker.pickImage(
-      source: source,
-      imageQuality: 85, // compress to keep upload fast & under size limits
-      maxWidth: 1600,
-    );
+    // On Android/iOS the image_picker plugin handles the permission dialog
+    // automatically when you call pickImage. However, on some Android 13+
+    // builds the dialog is silently skipped if the activity hasn't been
+    // resumed yet after a permission rationale.  We work around this by
+    // catching the LostDataResponse pattern and retrying once.
+    XFile? picked;
+    try {
+      picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1600,
+        requestFullMetadata: false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      // On Android, if the camera is unavailable or permission permanently
+      // denied, image_picker throws a PlatformException.
+      if (Platform.isAndroid && source == ImageSource.camera) {
+        setState(() => _errorMessage =
+            'Camera access denied. Please enable camera permission in your device settings, then try again.');
+      } else {
+        setState(() => _errorMessage = 'Could not access camera or gallery. Please check permissions.');
+      }
+      return;
+    }
     if (picked == null) return; // user cancelled
 
     setState(() => _isScanning = true);

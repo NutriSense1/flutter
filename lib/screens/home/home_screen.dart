@@ -92,11 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(height: 16),
 
                 // ── AI Insight ────────────────────────────────────────────
-                FadeSlide(delay: d * 3, child: const AiInsightCard(
-                  insight: "You've eaten 68% of your calorie target today. "
-                      "Add a protein-rich dinner to hit your 150g goal — "
-                      "you're 42g away. Try grilled chicken with brown rice.",
-                )),
+                FadeSlide(delay: d * 3, child: const AiInsightCard()),
                 const SizedBox(height: 16),
 
                 // ── Quick Actions ─────────────────────────────────────────

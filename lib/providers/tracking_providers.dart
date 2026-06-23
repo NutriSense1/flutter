@@ -11,18 +11,32 @@ final waterLogsProvider = StateNotifierProvider<WaterLogNotifier, List<WaterLogM
 class WaterLogNotifier extends StateNotifier<List<WaterLogModel>> {
   WaterLogNotifier() : super([]);
 
-  void addWater(String userId, double liters) {
-    final log = WaterLogModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: userId,
-      amountLiters: liters,
-      loggedAt: DateTime.now(),
-    );
-    state = [...state, log];
+  void loadLogs(List<WaterLogModel> logs) {
+    state = logs;
+  }
+
+  void addLog(WaterLogModel log) {
+    state = [log, ...state];
   }
 
   void removeLog(String id) {
     state = state.where((l) => l.id != id).toList();
+  }
+
+  /// Optimistic add — creates a local placeholder until server confirms.
+  WaterLogModel addWaterOptimistic(String userId, double liters) {
+    final log = WaterLogModel(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      userId: userId,
+      amountLiters: liters,
+      loggedAt: DateTime.now(),
+    );
+    state = [log, ...state];
+    return log;
+  }
+
+  void replaceLog(String tempId, WaterLogModel confirmed) {
+    state = state.map((l) => l.id == tempId ? confirmed : l).toList();
   }
 
   double totalForDate(DateTime date) {
@@ -33,10 +47,21 @@ class WaterLogNotifier extends StateNotifier<List<WaterLogModel>> {
             l.loggedAt.day == date.day)
         .fold(0.0, (sum, l) => sum + l.amountLiters);
   }
+
+  List<WaterLogModel> logsForDate(DateTime date) {
+    return state.where((l) =>
+        l.loggedAt.year == date.year &&
+        l.loggedAt.month == date.month &&
+        l.loggedAt.day == date.day).toList();
+  }
 }
 
 final todayWaterProvider = Provider<double>((ref) {
   return ref.watch(waterLogsProvider.notifier).totalForDate(DateTime.now());
+});
+
+final todayWaterLogsProvider = Provider<List<WaterLogModel>>((ref) {
+  return ref.watch(waterLogsProvider.notifier).logsForDate(DateTime.now());
 });
 
 // ─── Weight Provider ───────────────────────────────────────────────────────────
@@ -48,28 +73,33 @@ final weightLogsProvider = StateNotifierProvider<WeightLogNotifier, List<WeightL
 class WeightLogNotifier extends StateNotifier<List<WeightLogModel>> {
   WeightLogNotifier() : super([]);
 
-  void addWeight(String userId, double kg, {String? note}) {
-    final log = WeightLogModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: userId,
-      weightKg: kg,
-      note: note,
-      loggedAt: DateTime.now(),
-    );
-    state = [...state, log];
+  void loadLogs(List<WeightLogModel> logs) {
+    // Sort by date descending (newest first)
+    final sorted = List<WeightLogModel>.from(logs)
+      ..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
+    state = sorted;
+  }
+
+  void addLog(WeightLogModel log) {
+    state = [log, ...state];
   }
 
   void removeLog(String id) {
     state = state.where((l) => l.id != id).toList();
   }
 
-  WeightLogModel? get latestLog => state.isEmpty
-      ? null
-      : (List.from(state)..sort((a, b) => b.loggedAt.compareTo(a.loggedAt))).first;
+  WeightLogModel? get latestLog => state.isEmpty ? null : state.first;
 
   List<WeightLogModel> get last30Days {
     final cutoff = DateTime.now().subtract(const Duration(days: 30));
-    return state.where((l) => l.loggedAt.isAfter(cutoff)).toList()
+    return state
+        .where((l) => l.loggedAt.isAfter(cutoff))
+        .toList()
+      ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
+  }
+
+  List<WeightLogModel> get chronological {
+    return List<WeightLogModel>.from(state)
       ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
   }
 }
@@ -88,7 +118,7 @@ class ScanHistoryNotifier extends StateNotifier<List<ScanResultModel>> {
   ScanHistoryNotifier() : super([]);
 
   void addScan(ScanResultModel result) {
-    state = [result, ...state]; // newest first
+    state = [result, ...state];
   }
 
   List<ScanResultModel> get recentScans => state.take(10).toList();
@@ -111,7 +141,6 @@ class StepLogNotifier extends StateNotifier<List<StepLogModel>> {
         l.date.day == today.day).toList();
 
     if (existing.isNotEmpty) {
-      // Update today's entry
       state = state.map((l) {
         if (l.id == existing.first.id) {
           return StepLogModel(
@@ -170,15 +199,10 @@ class AchievementNotifier extends StateNotifier<List<AchievementModel>> {
     state = state.map((a) {
       if (a.id == id && !a.isUnlocked) {
         return AchievementModel(
-          id: a.id,
-          title: a.title,
-          description: a.description,
-          icon: a.icon,
-          xpReward: a.xpReward,
-          isUnlocked: true,
-          progress: 1.0,
-          unlockedAt: DateTime.now(),
-          category: a.category,
+          id: a.id, title: a.title, description: a.description,
+          icon: a.icon, xpReward: a.xpReward,
+          isUnlocked: true, progress: 1.0,
+          unlockedAt: DateTime.now(), category: a.category,
         );
       }
       return a;
@@ -189,18 +213,47 @@ class AchievementNotifier extends StateNotifier<List<AchievementModel>> {
     state = state.map((a) {
       if (a.id == id && !a.isUnlocked) {
         return AchievementModel(
-          id: a.id,
-          title: a.title,
-          description: a.description,
-          icon: a.icon,
-          xpReward: a.xpReward,
-          isUnlocked: false,
-          progress: progress.clamp(0.0, 1.0),
+          id: a.id, title: a.title, description: a.description,
+          icon: a.icon, xpReward: a.xpReward,
+          isUnlocked: false, progress: progress.clamp(0.0, 1.0),
           category: a.category,
         );
       }
       return a;
     }).toList();
+  }
+}
+
+// ─── Nutrition Tip Provider ────────────────────────────────────────────────────
+
+class NutritionTip {
+  final String title;
+  final String tip;
+  NutritionTip({required this.title, required this.tip});
+}
+
+final nutritionTipProvider = StateNotifierProvider<NutritionTipNotifier, AsyncValue<NutritionTip>>((ref) {
+  return NutritionTipNotifier();
+});
+
+class NutritionTipNotifier extends StateNotifier<AsyncValue<NutritionTip>> {
+  NutritionTipNotifier() : super(const AsyncValue.loading());
+
+  void setLoading() => state = const AsyncValue.loading();
+
+  void setTip(String title, String tip) {
+    state = AsyncValue.data(NutritionTip(title: title, tip: tip));
+  }
+
+  void setError(String msg) {
+    state = AsyncValue.error(msg, StackTrace.current);
+  }
+
+  void setFallback() {
+    state = AsyncValue.data(NutritionTip(
+      title: 'Stay Consistent',
+      tip: 'Scan and log your meals regularly to unlock personalised nutrition insights tailored to your goals.',
+    ));
   }
 }
 

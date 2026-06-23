@@ -22,6 +22,7 @@ import '../../screens/settings/notifications_screen.dart';
 import '../../screens/settings/appearance_screen.dart';
 import '../../screens/settings/privacy_security_screen.dart';
 import '../../screens/settings/help_support_screen.dart';
+import '../../screens/upgrade/upgrade_screen.dart';
 import '../../models/scan_result_model.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -123,6 +124,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.helpSupport,
         pageBuilder: (c, s) => _slideUp(s.pageKey, const HelpSupportScreen()),
       ),
+      GoRoute(
+        path: AppRoutes.upgrade,
+        pageBuilder: (c, s) => _slideUp(s.pageKey, const UpgradeScreen()),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(child: Text('Page not found: ${state.error}')),
@@ -221,4 +226,5 @@ class AppRoutes {
   static const String appearance = '/settings/appearance';
   static const String privacySecurity = '/settings/privacy-security';
   static const String helpSupport = '/settings/help-support';
+  static const String upgrade = '/upgrade';
 }

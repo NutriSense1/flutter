@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../models/scan_result_model.dart';
+import '../models/tracking_models.dart';
 import '../models/user_model.dart';
 import 'auth_service.dart';
 
@@ -15,11 +16,6 @@ class ApiException implements Exception {
   String toString() => 'ApiException: $message (status: $statusCode)';
 }
 
-/// Thrown when a request exceeds [AppConstants.requestTimeoutSeconds].
-/// Surfaced separately from [ApiException] so callers can show a
-/// "server may be waking up" message instead of a generic error —
-/// this is the most common failure mode on Render's free tier, where
-/// a cold instance can take 30-60s to respond to the first request.
 class ApiTimeoutException implements Exception {
   @override
   String toString() => 'Request timed out';
@@ -35,10 +31,6 @@ class ApiService {
       : _client = client ?? http.Client(),
         _authService = authService ?? AuthService();
 
-  /// Fetches a fresh Firebase ID token on every request. Firebase
-  /// caches and auto-refreshes the underlying token internally, so
-  /// this is cheap and always correct — never store/reuse a token
-  /// manually, since it expires after 1 hour.
   Future<Map<String, String>> _headers() async {
     final token = await _authService.getIdToken();
     return {
@@ -46,13 +38,6 @@ class ApiService {
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
-
-  // ─── Low-level HTTP helpers ─────────────────────────────────────────────
-  //
-  // Every request goes through one of these so a timeout is *always*
-  // applied — a bare `http` call has no timeout by default and will hang
-  // indefinitely if the backend is unreachable or waking from a cold
-  // start, which left the UI stuck with no feedback.
 
   Future<http.Response> _get(Uri uri) async {
     return _wrap(_client.get(uri, headers: await _headers()));
@@ -89,7 +74,7 @@ class ApiService {
     throw ApiException(message, response.statusCode);
   }
 
-  // ─── Scan Food (Gemini + Open Food Facts pipeline) ──────────────────────────
+  // ─── Scan Food ──────────────────────────────────────────────────────────────
 
   Future<ScanResultModel> scanFood({
     required String imageBase64,
@@ -115,7 +100,7 @@ class ApiService {
     return ScanResultModel.fromJson(json as Map<String, dynamic>);
   }
 
-  // ─── Onboarding ───────────────────────────────────────────────────────────
+  // ─── Onboarding ────────────────────────────────────────────────────────────
 
   Future<UserModel> completeOnboarding(Map<String, dynamic> onboardingData) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/users/onboarding');
@@ -124,7 +109,7 @@ class ApiService {
     return UserModel.fromJson(json as Map<String, dynamic>);
   }
 
-  // ─── User Profile ─────────────────────────────────────────────────────────
+  // ─── User Profile ──────────────────────────────────────────────────────────
 
   Future<UserModel> getProfile() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/users/me');
@@ -140,7 +125,7 @@ class ApiService {
     return UserModel.fromJson(json as Map<String, dynamic>);
   }
 
-  // ─── Food Logs ────────────────────────────────────────────────────────────
+  // ─── Food Logs ─────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getFoodLogs({DateTime? date}) async {
     final query = date != null ? '?date=${date.toIso8601String().split('T')[0]}' : '';
@@ -161,12 +146,13 @@ class ApiService {
     await _handleResponse(response);
   }
 
-  // ─── Weight Logs ──────────────────────────────────────────────────────────
+  // ─── Weight Logs ───────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getWeightLogs({int days = 30}) async {
+  Future<List<WeightLogModel>> getWeightLogs({int days = 0}) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/weight-logs?days=$days');
     final response = await _get(uri);
-    return await _handleResponse(response) as List<dynamic>;
+    final list = await _handleResponse(response) as List<dynamic>;
+    return list.map((e) => WeightLogModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<Map<String, dynamic>> logWeight(double weightKg, {String? note}) async {
@@ -178,7 +164,13 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  // ─── Water Logs ───────────────────────────────────────────────────────────
+  Future<void> deleteWeightLog(String id) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/weight-logs/$id');
+    final response = await _delete(uri);
+    if (response.statusCode != 204) await _handleResponse(response);
+  }
+
+  // ─── Water Logs ────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> logWater(double liters) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/water-logs');
@@ -195,7 +187,21 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  // ─── Step Logs ────────────────────────────────────────────────────────────
+  Future<List<WaterLogModel>> getWaterLogs({String? date, int days = 7}) async {
+    final query = date != null ? '?date=$date' : '?days=$days';
+    final uri = Uri.parse('${AppConstants.baseUrl}/water-logs$query');
+    final response = await _get(uri);
+    final list = await _handleResponse(response) as List<dynamic>;
+    return list.map((e) => WaterLogModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> deleteWaterLog(String id) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/water-logs/$id');
+    final response = await _delete(uri);
+    if (response.statusCode != 204) await _handleResponse(response);
+  }
+
+  // ─── Step Logs ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> syncSteps({
     required int steps,
@@ -216,10 +222,16 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  // ─── AI Coach ─────────────────────────────────────────────────────────────
+  // ─── AI Coach ──────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getDailyReview() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/ai/daily-review');
+    final response = await _get(uri);
+    return await _handleResponse(response) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getNutritionTip() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/ai/nutrition-tip');
     final response = await _get(uri);
     return await _handleResponse(response) as Map<String, dynamic>;
   }
@@ -231,7 +243,7 @@ class ApiService {
     return json['reply'] as String;
   }
 
-  // ─── Analytics ────────────────────────────────────────────────────────────
+  // ─── Analytics ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getWeeklyReport() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/analytics/weekly');
@@ -239,7 +251,7 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  // ─── Achievements ─────────────────────────────────────────────────────────
+  // ─── Achievements ──────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getAchievements() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/achievements');
@@ -247,7 +259,7 @@ class ApiService {
     return await _handleResponse(response) as List<dynamic>;
   }
 
-  // ─── Notifications / Push ───────────────────────────────────────────────────
+  // ─── Notifications / Push ──────────────────────────────────────────────────
 
   Future<void> registerDeviceToken(String token, String platform) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/notifications/device-token');
@@ -299,7 +311,7 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  // ─── Account ────────────────────────────────────────────────────────────────
+  // ─── Account ───────────────────────────────────────────────────────────────
 
   Future<void> deleteAccount() async {
     final uri = Uri.parse('${AppConstants.baseUrl}/users/me');

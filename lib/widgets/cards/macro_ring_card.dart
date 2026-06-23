@@ -1,1 +1,1 @@
-export 'ai_insight_card.dart' show MacroRingCard, QuickActionsCard, RecentScansCard;
+export 'ai_insight_card.dart' show MacroRingCard;
