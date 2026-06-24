@@ -142,6 +142,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -306,6 +307,7 @@ class _PageShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
       child: Column(
@@ -410,6 +412,7 @@ class _SelectCardState extends State<_SelectCard>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedTap(
       onTap: widget.onTap,
       haptic: false,
@@ -498,6 +501,7 @@ class _SliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -545,6 +549,7 @@ class _WelcomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
       child: Column(
@@ -626,6 +631,7 @@ class _FeatureRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
@@ -671,6 +677,7 @@ class _NamePageState extends ConsumerState<_NamePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final prefilled = _ctrl.text.trim().isNotEmpty;
     return _PageShell(
       emoji: '👋',
@@ -721,6 +728,7 @@ class _AgePageState extends ConsumerState<_AgePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return _PageShell(
       emoji: '🎂',
       title: 'How old are you?',
@@ -989,6 +997,7 @@ class _DietaryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = ref.watch(onboardingProvider).dietaryPreferences;
     return _PageShell(
       emoji: '🥦',
@@ -1039,6 +1048,7 @@ class _AllergiesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selected = ref.watch(onboardingProvider).allergies;
     return _PageShell(
       emoji: '⚠️',
@@ -1072,6 +1082,7 @@ class _AllergiesPage extends ConsumerWidget {
                 a,
                 style: AppTypography.labelMedium.copyWith(
                     color: on ? AppColors.error : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
+                  ),
               ),
             ),
           );
@@ -1101,6 +1112,7 @@ class _PlanSummaryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final data = ref.watch(onboardingProvider);
 
     final double weight = data.weightKg ?? 70.0;
@@ -1230,6 +1242,7 @@ class _MacroStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
