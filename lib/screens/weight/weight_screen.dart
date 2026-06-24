@@ -80,7 +80,7 @@ class _WeightScreenState extends ConsumerState<WeightScreen>
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.divider,
+                    color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkDivider : AppColors.divider,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

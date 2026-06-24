@@ -26,7 +26,7 @@ class AppearanceScreen extends ConsumerWidget {
           Text('Theme', style: AppTypography.titleMedium),
           const SizedBox(height: 4),
           Text('Applies instantly across the whole app.',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textHint)),
+              style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint)),
           const SizedBox(height: 16),
           ..._options.map((o) {
             final selected = current == o.mode;
@@ -47,21 +47,21 @@ class AppearanceScreen extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(o.icon, color: selected ? AppColors.primary : AppColors.textSecondary),
+                      Icon(o.icon, color: selected ? AppColors.primary : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(o.label, style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
-                            Text(o.desc, style: AppTypography.bodySmall.copyWith(color: AppColors.textHint)),
+                            Text(o.desc, style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint)),
                           ],
                         ),
                       ),
                       if (selected)
                         const Icon(Icons.check_circle_rounded, color: AppColors.primary)
                       else
-                        Icon(Icons.circle_outlined, color: AppColors.textHint.withOpacity(0.5)),
+                        Icon(Icons.circle_outlined, color: (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint).withOpacity(0.5)),
                     ],
                   ),
                 ),

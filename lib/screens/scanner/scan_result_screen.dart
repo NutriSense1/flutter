@@ -104,7 +104,7 @@ class _ScanResultScreenState extends ConsumerState<ScanResultScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [_scoreColor.withOpacity(0.15), AppColors.background],
+                    colors: [_scoreColor.withOpacity(0.15), Theme.of(context).scaffoldBackgroundColor],
                   ),
                 ),
                 child: SafeArea(
@@ -119,11 +119,11 @@ class _ScanResultScreenState extends ConsumerState<ScanResultScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (r.brand != null)
-                                Text(r.brand!, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                                Text(r.brand!, style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
                               Text(r.productName, style: AppTypography.headlineLarge),
                               const SizedBox(height: 4),
                               Text(r.foodType,
-                                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                                  style: AppTypography.bodyMedium.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
                             ],
                           ),
                         ),
@@ -332,9 +332,9 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkDivider : AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,9 +358,9 @@ class _ProsConsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkDivider : AppColors.divider),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,7 +377,7 @@ class _ProsConsCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 ...positives.map((p) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('• $p', style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary)),
+                      child: Text('• $p', style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
                     )),
               ],
             ),
@@ -395,7 +395,7 @@ class _ProsConsCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 ...negatives.map((n) => Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('• $n', style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary)),
+                      child: Text('• $n', style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
                     )),
               ],
             ),
@@ -416,9 +416,9 @@ class _CalorieOverviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkDivider : AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,9 +566,9 @@ class _LogToMealCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkDivider : AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,14 +586,16 @@ class _LogToMealCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.secondary : AppColors.surfaceVariant,
+                      color: isSelected
+                          ? (Theme.of(context).brightness == Brightness.dark ? AppColors.primary.withOpacity(0.18) : AppColors.secondary)
+                          : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                           color: isSelected ? AppColors.primary : Colors.transparent),
                     ),
                     child: Text(meal,
                         style: AppTypography.labelMedium.copyWith(
-                            color: isSelected ? AppColors.primary : AppColors.textSecondary)),
+                            color: isSelected ? AppColors.primary : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary))),
                   ),
                 ),
               );
@@ -643,11 +645,13 @@ class _ServingBtn extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: onTap != null ? AppColors.secondary : AppColors.surfaceVariant,
+          color: onTap != null
+              ? (Theme.of(context).brightness == Brightness.dark ? AppColors.primary.withOpacity(0.18) : AppColors.secondary)
+              : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon,
-            color: onTap != null ? AppColors.primary : AppColors.textHint, size: 20),
+            color: onTap != null ? AppColors.primary : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint), size: 20),
       ),
     );
   }

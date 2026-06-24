@@ -15,11 +15,10 @@ class DiaryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(diaryDateProvider);
-    final allLogs = ref.watch(foodLogsProvider);
-    final notifier = ref.read(foodLogsProvider.notifier);
-    final todayLogs = notifier.logsForDate(selectedDate);
-    final summary = DailySummary.fromLogs(selectedDate, todayLogs);
-    final user = ref.watch(userProvider);
+    final notifier     = ref.read(foodLogsProvider.notifier);
+    final todayLogs    = notifier.logsForDate(selectedDate);
+    final summary      = DailySummary.fromLogs(selectedDate, todayLogs);
+    final user         = ref.watch(userProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -35,35 +34,25 @@ class DiaryScreen extends ConsumerWidget {
                 firstDate: DateTime.now().subtract(const Duration(days: 90)),
                 lastDate: DateTime.now(),
               );
-              if (picked != null) {
-                ref.read(diaryDateProvider.notifier).state = picked;
-              }
+              if (picked != null) ref.read(diaryDateProvider.notifier).state = picked;
             },
           ),
         ],
       ),
       body: CustomScrollView(
         slivers: [
-          // Date selector
           SliverToBoxAdapter(
             child: _DateStrip(
               selected: selectedDate,
               onSelect: (d) => ref.read(diaryDateProvider.notifier).state = d,
             ),
           ),
-
-          // Calorie summary bar
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: _DailySummaryBar(
-                summary: summary,
-                calorieTarget: user?.dailyCalorieTarget ?? 2000,
-              ),
+              child: _DailySummaryBar(summary: summary, calorieTarget: user?.dailyCalorieTarget ?? 2000),
             ),
           ),
-
-          // Meal sections
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
             sliver: SliverList(
@@ -101,13 +90,18 @@ class DiaryScreen extends ConsumerWidget {
 class _DateStrip extends StatelessWidget {
   final DateTime selected;
   final ValueChanged<DateTime> onSelect;
-
   const _DateStrip({required this.selected, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
+    final isDark       = Theme.of(context).brightness == Brightness.dark;
+    final unselBg      = isDark ? AppColors.darkSurface : AppColors.surface;
+    final unselTxtPri  = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final unselTxtSec  = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+
     final today = DateTime.now();
-    final days = List.generate(7, (i) => today.subtract(Duration(days: 6 - i)));
+    final days  = List.generate(7, (i) => today.subtract(Duration(days: 6 - i)));
+
     return SizedBox(
       height: 72,
       child: ListView.separated(
@@ -116,16 +110,16 @@ class _DateStrip extends StatelessWidget {
         itemCount: days.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final day = days[i];
+          final day        = days[i];
           final isSelected = day.day == selected.day && day.month == selected.month;
-          final isToday = day.day == today.day;
+          final isToday    = day.day == today.day;
           return GestureDetector(
             onTap: () => onSelect(day),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 52,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.surface,
+                color: isSelected ? AppColors.primary : unselBg,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isToday && !isSelected ? AppColors.primary : Colors.transparent,
@@ -137,14 +131,14 @@ class _DateStrip extends StatelessWidget {
                   Text(
                     ['M', 'T', 'W', 'T', 'F', 'S', 'S'][day.weekday - 1],
                     style: AppTypography.labelSmall.copyWith(
-                      color: isSelected ? Colors.white70 : AppColors.textSecondary,
+                      color: isSelected ? Colors.white70 : unselTxtSec,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${day.day}',
                     style: AppTypography.titleMedium.copyWith(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
+                      color: isSelected ? Colors.white : unselTxtPri,
                     ),
                   ),
                 ],
@@ -162,27 +156,32 @@ class _DateStrip extends StatelessWidget {
 class _DailySummaryBar extends StatelessWidget {
   final DailySummary summary;
   final double calorieTarget;
-
   const _DailySummaryBar({required this.summary, required this.calorieTarget});
 
   @override
   Widget build(BuildContext context) {
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
+    final surface  = isDark ? AppColors.darkSurface : AppColors.surface;
+    final divider  = isDark ? AppColors.darkDivider : AppColors.divider;
+    final trackBg  = isDark ? AppColors.darkSurfaceVariant : AppColors.secondary;
+    final hintTxt  = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
     final remaining = (calorieTarget - summary.totalCalories).clamp(0, calorieTarget);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: divider),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _CalItem(label: 'Eaten', value: summary.totalCalories.round(), color: AppColors.calories),
-              _CalItem(label: 'Remaining', value: remaining.round(), color: AppColors.primary),
-              _CalItem(label: 'Goal', value: calorieTarget.round(), color: AppColors.textSecondary),
+              _CalItem(label: 'Eaten',     value: summary.totalCalories.round(), color: AppColors.calories),
+              _CalItem(label: 'Remaining', value: remaining.round(),             color: AppColors.primary),
+              _CalItem(label: 'Goal',      value: calorieTarget.round(),         color: hintTxt),
             ],
           ),
           const SizedBox(height: 12),
@@ -190,7 +189,7 @@ class _DailySummaryBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: (summary.totalCalories / calorieTarget).clamp(0, 1),
-              backgroundColor: AppColors.secondary,
+              backgroundColor: trackBg,
               valueColor: const AlwaysStoppedAnimation(AppColors.primary),
               minHeight: 8,
             ),
@@ -212,8 +211,8 @@ class _CalItem extends StatelessWidget {
     return Column(
       children: [
         Text('$value', style: AppTypography.headlineSmall.copyWith(color: color)),
-        Text('kcal', style: AppTypography.labelSmall.copyWith(color: color)),
-        Text(label, style: AppTypography.labelSmall),
+        Text('kcal',   style: AppTypography.labelSmall.copyWith(color: color)),
+        Text(label,    style: AppTypography.labelSmall),
       ],
     );
   }
@@ -226,56 +225,44 @@ class _MealSection extends StatelessWidget {
   final List<FoodLogModel> logs;
   final ValueChanged<String> onRemove;
   final VoidCallback onAdd;
+  const _MealSection({required this.mealType, required this.logs, required this.onRemove, required this.onAdd});
 
-  const _MealSection({
-    required this.mealType,
-    required this.logs,
-    required this.onRemove,
-    required this.onAdd,
-  });
-
-  static const _mealIcons = {
-    'Breakfast': '🌅',
-    'Lunch': '☀️',
-    'Dinner': '🌙',
-    'Snack': '🍎',
-  };
-
+  static const _mealIcons = {'Breakfast': '🌅', 'Lunch': '☀️', 'Dinner': '🌙', 'Snack': '🍎'};
   double get _totalCals => logs.fold(0, (s, l) => s + l.totalCalories);
 
   @override
   Widget build(BuildContext context) {
+    final isDark      = Theme.of(context).brightness == Brightness.dark;
+    final surface     = isDark ? AppColors.darkSurface : AppColors.surface;
+    final divider     = isDark ? AppColors.darkDivider : AppColors.divider;
+    final addBtnBg    = isDark ? AppColors.primary.withOpacity(0.15) : AppColors.secondary;
+    final secondaryTxt = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+    final hintTxt     = isDark ? AppColors.darkTextHint : AppColors.textHint;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: divider),
       ),
       child: Column(
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
             child: Row(
               children: [
-                Text(_mealIcons[mealType] ?? '🍽️',
-                    style: const TextStyle(fontSize: 22)),
+                Text(_mealIcons[mealType] ?? '🍽️', style: const TextStyle(fontSize: 22)),
                 const SizedBox(width: 10),
                 Text(mealType, style: AppTypography.titleLarge),
                 const Spacer(),
                 if (logs.isNotEmpty)
-                  Text('${_totalCals.round()} kcal',
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  Text('${_totalCals.round()} kcal', style: AppTypography.bodySmall.copyWith(color: secondaryTxt)),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: onAdd,
                   child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(color: addBtnBg, borderRadius: BorderRadius.circular(8)),
                     child: const Icon(Icons.add_rounded, color: AppColors.primary, size: 20),
                   ),
                 ),
@@ -285,12 +272,11 @@ class _MealSection extends StatelessWidget {
           if (logs.isEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Text('No food logged yet',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textHint)),
+              child: Text('No food logged yet', style: AppTypography.bodySmall.copyWith(color: hintTxt)),
             )
           else ...[
-            const Divider(height: 1),
-            ...logs.map((log) => _FoodLogTile(log: log, onRemove: () => onRemove(log.id))),
+            Divider(height: 1, color: divider),
+            ...logs.map((log) => _FoodLogTile(log: log, onRemove: () => onRemove(log.id), isDark: isDark)),
           ],
         ],
       ),
@@ -301,16 +287,20 @@ class _MealSection extends StatelessWidget {
 class _FoodLogTile extends StatelessWidget {
   final FoodLogModel log;
   final VoidCallback onRemove;
-  const _FoodLogTile({required this.log, required this.onRemove});
+  final bool isDark;
+  const _FoodLogTile({required this.log, required this.onRemove, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final iconBg  = isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant;
+    final iconClr = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+
     return Dismissible(
       key: Key(log.id),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        color: AppColors.error.withOpacity(0.1),
+        color: AppColors.error.withOpacity(0.12),
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
       ),
@@ -320,24 +310,16 @@ class _FoodLogTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.fastfood_outlined,
-                  color: AppColors.textSecondary, size: 20),
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.fastfood_outlined, color: iconClr, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(log.productName,
-                      style: AppTypography.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(log.productName, style: AppTypography.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text(
                     '${log.servingsConsumed.toStringAsFixed(1)} serving · ${log.totalProtein.toStringAsFixed(1)}g protein',
                     style: AppTypography.bodySmall,
@@ -345,10 +327,7 @@ class _FoodLogTile extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              '${log.totalCalories.round()} kcal',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.calories),
-            ),
+            Text('${log.totalCalories.round()} kcal', style: AppTypography.bodyMedium.copyWith(color: AppColors.calories)),
           ],
         ),
       ),

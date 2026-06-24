@@ -75,7 +75,7 @@ class _DietaryPreferencesScreenState extends ConsumerState<DietaryPreferencesScr
           Text('Diet type', style: AppTypography.titleMedium),
           const SizedBox(height: 4),
           Text('Used to tailor recommendations and warnings on scanned food.',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textHint)),
+              style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint)),
           const SizedBox(height: 12),
           _ChipGroup(
             options: AppConstants.dietaryPreferences,
@@ -87,7 +87,7 @@ class _DietaryPreferencesScreenState extends ConsumerState<DietaryPreferencesScr
           Text('Allergies & intolerances', style: AppTypography.titleMedium),
           const SizedBox(height: 4),
           Text('Scanned food containing these will be flagged with a warning.',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textHint)),
+              style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint)),
           const SizedBox(height: 12),
           _ChipGroup(
             options: AppConstants.allergens,
@@ -142,14 +142,14 @@ class _ChipGroup extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected ? color.withOpacity(0.12) : AppColors.surfaceVariant,
+              color: isSelected ? color.withOpacity(0.12) : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
             ),
             child: Text(
               o,
               style: AppTypography.bodyMedium.copyWith(
-                color: isSelected ? color : AppColors.textPrimary,
+                color: isSelected ? color : (Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextPrimary : AppColors.textPrimary),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

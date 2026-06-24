@@ -163,11 +163,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceVariant,
+                              color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.arrow_back_ios_new_rounded,
-                                size: 18, color: AppColors.textPrimary),
+                            child: Icon(Icons.arrow_back_ios_new_rounded,
+                                size: 18, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
                           ),
                         ),
                       ),
@@ -185,7 +185,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                             decoration: BoxDecoration(
                               color: isActive
                                   ? AppColors.primary
-                                  : AppColors.divider,
+                                  : (isDark ? AppColors.darkDivider : AppColors.divider),
                               borderRadius: BorderRadius.circular(3),
                             ),
                           );
@@ -208,7 +208,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                         children: [
                           Container(
                               height: 4,
-                              color: AppColors.surfaceVariant),
+                              color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                           FractionallySizedBox(
                             widthFactor: _progressAnim.value,
                             child: Container(
@@ -326,7 +326,7 @@ class _PageShell extends StatelessWidget {
             delay: const Duration(milliseconds: 190),
             child: Text(subtitle,
                 style: AppTypography.bodyLarge
-                    .copyWith(color: AppColors.textSecondary)),
+                    .copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
           ),
           const SizedBox(height: 28),
           Expanded(
@@ -420,10 +420,12 @@ class _SelectCardState extends State<_SelectCard>
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
-            color: widget.selected ? AppColors.secondary : AppColors.surface,
+            color: widget.selected
+                ? (isDark ? AppColors.primary.withOpacity(0.18) : AppColors.secondary)
+                : (isDark ? AppColors.darkSurface : AppColors.surface),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: widget.selected ? AppColors.primary : AppColors.divider,
+              color: widget.selected ? AppColors.primary : (isDark ? AppColors.darkDivider : AppColors.divider),
               width: widget.selected ? 2 : 1,
             ),
             boxShadow: widget.selected
@@ -450,7 +452,7 @@ class _SelectCardState extends State<_SelectCard>
                         style: AppTypography.titleMedium.copyWith(
                           color: widget.selected
                               ? AppColors.primary
-                              : AppColors.textPrimary,
+                              : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
                         )),
                     if (widget.subtitle != null) ...[
                       const SizedBox(height: 2),
@@ -512,7 +514,7 @@ class _SliderRow extends StatelessWidget {
                 TextSpan(
                     text: ' $unit',
                     style: AppTypography.bodyMedium
-                        .copyWith(color: AppColors.textSecondary)),
+                        .copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
               ]),
             ),
           ],
@@ -523,7 +525,7 @@ class _SliderRow extends StatelessWidget {
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
             activeTrackColor: AppColors.primary,
-            inactiveTrackColor: AppColors.surfaceVariant,
+            inactiveTrackColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
             thumbColor: AppColors.primary,
             overlayColor: AppColors.primary.withOpacity(0.12),
           ),
@@ -584,7 +586,7 @@ class _WelcomePage extends StatelessWidget {
             child: Text(
               'Scan food, understand ingredients, track macros, and make smarter choices every day.',
               style: AppTypography.bodyLarge
-                  .copyWith(color: AppColors.textSecondary),
+                  .copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
             ),
           ),
           const SizedBox(height: 32),
@@ -630,7 +632,7 @@ class _FeatureRow extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: AppColors.secondary,
+            color: isDark ? AppColors.primary.withOpacity(0.15) : AppColors.secondary,
             borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(icon, color: AppColors.primary, size: 22),
@@ -684,7 +686,7 @@ class _NamePageState extends ConsumerState<_NamePage> {
         decoration: InputDecoration(
           hintText: 'Your name',
           hintStyle: AppTypography.headlineMedium
-              .copyWith(color: AppColors.textHint),
+              .copyWith(color: isDark ? AppColors.darkTextHint : AppColors.textHint),
         ),
         textCapitalization: TextCapitalization.words,
         onChanged: (v) =>
@@ -732,7 +734,7 @@ class _AgePageState extends ConsumerState<_AgePage> {
           const SizedBox(height: 4),
           Text('years old',
               style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.textSecondary)),
+                  .copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
           const SizedBox(height: 28),
           _SliderRow(
             label: 'Age',
@@ -1007,7 +1009,9 @@ class _DietaryPage extends ConsumerWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: on ? AppColors.secondary : AppColors.surfaceVariant,
+                color: on
+                ? (isDark ? AppColors.primary.withOpacity(0.15) : AppColors.secondary)
+                : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                 borderRadius: BorderRadius.circular(100),
                 border: Border.all(
                   color: on ? AppColors.primary : Colors.transparent,
@@ -1019,7 +1023,7 @@ class _DietaryPage extends ConsumerWidget {
                 style: AppTypography.labelMedium.copyWith(
                     color: on
                         ? AppColors.primary
-                        : AppColors.textPrimary),
+                        : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
               ),
             ),
           );
@@ -1056,7 +1060,7 @@ class _AllergiesPage extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: on
                     ? const Color(0xFFFFE4E4)
-                    : AppColors.surfaceVariant,
+                    : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                 borderRadius: BorderRadius.circular(100),
                 border: Border.all(
                   color:
@@ -1067,7 +1071,7 @@ class _AllergiesPage extends ConsumerWidget {
               child: Text(
                 a,
                 style: AppTypography.labelMedium.copyWith(
-                    color: on ? AppColors.error : AppColors.textPrimary),
+                    color: on ? AppColors.error : (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
               ),
             ),
           );
@@ -1190,14 +1194,14 @@ class _PlanSummaryPage extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
+              color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Icon(Icons.info_outline_rounded,
-                    size: 18, color: AppColors.textSecondary),
+                    size: 18, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1229,9 +1233,9 @@ class _MacroStatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: isDark ? AppColors.darkDivider : AppColors.divider),
       ),
       child: Column(
         children: [

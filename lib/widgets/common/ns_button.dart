@@ -164,12 +164,12 @@ class NsTextField extends StatelessWidget {
         labelText: label,
         hintText: hint,
         prefixIcon: prefixIcon != null
-            ? Icon(prefixIcon, color: AppColors.textSecondary, size: 20)
+            ? Icon(prefixIcon, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary, size: 20)
             : null,
         suffixIcon: suffixIcon != null
             ? GestureDetector(
                 onTap: onSuffixTap,
-                child: Icon(suffixIcon, color: AppColors.textSecondary, size: 20),
+                child: Icon(suffixIcon, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary, size: 20),
               )
             : null,
       ),

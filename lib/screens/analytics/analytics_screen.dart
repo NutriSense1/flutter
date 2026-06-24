@@ -420,7 +420,7 @@ class _EmptyChart extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.bar_chart_rounded, color: AppColors.textHint, size: 40),
+          Icon(Icons.bar_chart_rounded, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint, size: 40),
           const SizedBox(height: 8),
           Text(message, style: AppTypography.bodySmall, textAlign: TextAlign.center),
         ],

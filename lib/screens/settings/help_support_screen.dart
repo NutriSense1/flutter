@@ -65,7 +65,7 @@ class HelpSupportScreen extends StatelessWidget {
           Center(
             child: Text(
               'NutriSense v1.0.0',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textHint),
+              style: AppTypography.bodySmall.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint),
             ),
           ),
         ],
@@ -90,7 +90,7 @@ class _FaqTile extends StatelessWidget {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: Text(answer, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+            child: Text(answer, style: AppTypography.bodyMedium.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
           ),
         ],
       ),
@@ -121,7 +121,7 @@ class _ContactRow extends StatelessWidget {
             const SizedBox(width: 12),
             Text(label, style: AppTypography.bodyLarge),
             const Spacer(),
-            const Icon(Icons.copy_rounded, size: 16, color: AppColors.textHint),
+            Icon(Icons.copy_rounded, size: 16, color: Theme.of(context).brightness == Brightness.dark ? AppColors.darkTextHint : AppColors.textHint),
           ],
         ),
       ),

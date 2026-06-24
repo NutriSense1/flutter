@@ -12,7 +12,13 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider);
+    final user    = ref.watch(userProvider);
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? AppColors.darkSurface : AppColors.surface;
+    final divider = isDark ? AppColors.darkDivider : AppColors.divider;
+    final secTxt  = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+    final hintTxt = isDark ? AppColors.darkTextHint : AppColors.textHint;
+    final avatarBg = isDark ? AppColors.primary.withOpacity(0.18) : AppColors.secondary;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -22,12 +28,12 @@ class ProfileScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile header
+            // ── Avatar + name ────────────────────────────────────────────
             Row(
               children: [
                 CircleAvatar(
                   radius: 36,
-                  backgroundColor: AppColors.secondary,
+                  backgroundColor: avatarBg,
                   child: Text(
                     user?.name.isNotEmpty == true ? user!.name[0] : 'U',
                     style: AppTypography.headlineLarge.copyWith(color: AppColors.primary),
@@ -39,58 +45,48 @@ class ProfileScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(user?.name ?? 'User', style: AppTypography.headlineSmall),
-                      Text(user?.email ?? '', style: AppTypography.bodySmall),
+                      Text(user?.email ?? '',     style: AppTypography.bodySmall.copyWith(color: secTxt)),
                       const SizedBox(height: 6),
                       if (user?.isPremium == true)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.accentGradient,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text('PREMIUM',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                          decoration: BoxDecoration(gradient: AppColors.accentGradient, borderRadius: BorderRadius.circular(8)),
+                          child: const Text('PREMIUM', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                         ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {},
-                ),
+                IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () {}),
               ],
             ),
             const SizedBox(height: 24),
 
-            // BMI Card
+            // ── BMI card ─────────────────────────────────────────────────
             if (user != null)
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.divider),
+                  border: Border.all(color: divider),
                 ),
                 child: Row(
                   children: [
-                    _BmiStat(label: 'BMI', value: user.bmi.toStringAsFixed(1)),
-                    _Divider(),
+                    _BmiStat(label: 'BMI',      value: user.bmi.toStringAsFixed(1)),
+                    _BmiDivider(color: divider),
                     _BmiStat(label: 'Category', value: user.bmiCategory),
-                    _Divider(),
-                    _BmiStat(label: 'Goal', value: user.goal),
+                    _BmiDivider(color: divider),
+                    _BmiStat(label: 'Goal',     value: user.goal),
                   ],
                 ),
               ),
             const SizedBox(height: 20),
 
-            // Premium upsell (if not premium)
+            // ── Premium upsell ────────────────────────────────────────────
             if (user?.isPremium != true)
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(20)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -110,12 +106,9 @@ class ProfileScreen extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primary,
-                        ),
-                        child: const Text('Upgrade — \$9.99/mo'),
+                        onPressed: () => context.push(AppRoutes.upgrade),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
+                        child: const Text('Upgrade Now'),
                       ),
                     ),
                   ],
@@ -125,19 +118,21 @@ class ProfileScreen extends ConsumerWidget {
 
             Text('Settings', style: AppTypography.titleLarge),
             const SizedBox(height: 12),
-            _SettingsTile(icon: Icons.person_outline, label: 'Personal Details', onTap: () => context.push(AppRoutes.personalDetails)),
-            _SettingsTile(icon: Icons.flag_outlined, label: 'Goals & Targets', onTap: () => context.push(AppRoutes.goalsTargets)),
-            _SettingsTile(icon: Icons.restaurant_menu_outlined, label: 'Dietary Preferences', onTap: () => context.push(AppRoutes.dietaryPreferences)),
-            _SettingsTile(icon: Icons.emoji_events_outlined, label: 'Achievements', onTap: () => context.push(AppRoutes.achievements)),
-            _SettingsTile(icon: Icons.notifications_outlined, label: 'Notifications', onTap: () => context.push(AppRoutes.notificationSettings)),
-            _SettingsTile(icon: Icons.dark_mode_outlined, label: 'Appearance', onTap: () => context.push(AppRoutes.appearance)),
-            _SettingsTile(icon: Icons.lock_outline, label: 'Privacy & Security', onTap: () => context.push(AppRoutes.privacySecurity)),
-            _SettingsTile(icon: Icons.help_outline, label: 'Help & Support', onTap: () => context.push(AppRoutes.helpSupport)),
+            _SettingsTile(icon: Icons.person_outline,        label: 'Personal Details',     secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.personalDetails)),
+            _SettingsTile(icon: Icons.flag_outlined,         label: 'Goals & Targets',      secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.goalsTargets)),
+            _SettingsTile(icon: Icons.restaurant_menu_outlined, label: 'Dietary Preferences', secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.dietaryPreferences)),
+            _SettingsTile(icon: Icons.emoji_events_outlined, label: 'Achievements',          secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.achievements)),
+            _SettingsTile(icon: Icons.notifications_outlined, label: 'Notifications',        secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.notificationSettings)),
+            _SettingsTile(icon: Icons.dark_mode_outlined,    label: 'Appearance',            secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.appearance)),
+            _SettingsTile(icon: Icons.lock_outline,          label: 'Privacy & Security',    secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.privacySecurity)),
+            _SettingsTile(icon: Icons.help_outline,          label: 'Help & Support',        secTxt: secTxt, hintTxt: hintTxt, onTap: () => context.push(AppRoutes.helpSupport)),
             const SizedBox(height: 12),
             _SettingsTile(
               icon: Icons.logout_rounded,
               label: 'Sign Out',
               color: AppColors.error,
+              secTxt: secTxt,
+              hintTxt: hintTxt,
               onTap: () async {
                 await ref.read(notificationServiceProvider).removeTokenOnSignOut();
                 await ref.read(authServiceProvider).signOut();
@@ -156,7 +151,6 @@ class _BmiStat extends StatelessWidget {
   final String label;
   final String value;
   const _BmiStat({required this.label, required this.value});
-
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -171,11 +165,11 @@ class _BmiStat extends StatelessWidget {
   }
 }
 
-class _Divider extends StatelessWidget {
+class _BmiDivider extends StatelessWidget {
+  final Color color;
+  const _BmiDivider({required this.color});
   @override
-  Widget build(BuildContext context) {
-    return Container(width: 1, height: 36, color: AppColors.divider);
-  }
+  Widget build(BuildContext context) => Container(width: 1, height: 36, color: color);
 }
 
 class _SettingsTile extends StatelessWidget {
@@ -183,13 +177,9 @@ class _SettingsTile extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Color? color;
-
-  const _SettingsTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
-  });
+  final Color secTxt;
+  final Color hintTxt;
+  const _SettingsTile({required this.icon, required this.label, required this.onTap, required this.secTxt, required this.hintTxt, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -200,14 +190,10 @@ class _SettingsTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: color ?? AppColors.textSecondary, size: 22),
+            Icon(icon, color: color ?? secTxt, size: 22),
             const SizedBox(width: 16),
-            Expanded(
-              child: Text(label,
-                  style: AppTypography.bodyLarge.copyWith(color: color ?? AppColors.textPrimary)),
-            ),
-            if (color == null)
-              const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
+            Expanded(child: Text(label, style: AppTypography.bodyLarge.copyWith(color: color))),
+            if (color == null) Icon(Icons.chevron_right_rounded, color: hintTxt),
           ],
         ),
       ),
