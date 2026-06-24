@@ -325,7 +325,7 @@ class _PageShell extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           FadeSlide(
-            delay: const Duration(milliseconds: 190),
+            delay: Duration(milliseconds: 190),
             child: Text(subtitle,
                 style: AppTypography.bodyLarge
                     .copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
@@ -421,7 +421,7 @@ class _SelectCardState extends State<_SelectCard>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           decoration: BoxDecoration(
             color: widget.selected
                 ? (isDark ? AppColors.primary.withOpacity(0.18) : AppColors.secondary)
@@ -526,7 +526,7 @@ class _SliderRow extends StatelessWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 4,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+            thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
             activeTrackColor: AppColors.primary,
             inactiveTrackColor: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
@@ -739,7 +739,7 @@ class _AgePageState extends ConsumerState<_AgePage> {
           Text('$_age',
               style: AppTypography.numericLarge
                   .copyWith(color: AppColors.primary, fontSize: 56)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text('years old',
               style: AppTypography.bodyMedium
                   .copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
@@ -1016,7 +1016,7 @@ class _DietaryPage extends ConsumerWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: on
                 ? (isDark ? AppColors.primary.withOpacity(0.15) : AppColors.secondary)
@@ -1069,7 +1069,7 @@ class _AllergiesPage extends ConsumerWidget {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: on
-                    ? const Color(0xFFFFE4E4)
+                    ? Color(0xFFFFE4E4)
                     : (isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant),
                 borderRadius: BorderRadius.circular(100),
                 border: Border.all(
@@ -1204,7 +1204,7 @@ class _PlanSummaryPage extends ConsumerWidget {
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurfaceVariant : AppColors.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
@@ -1212,7 +1212,7 @@ class _PlanSummaryPage extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline_rounded,
+                Icon(Icons.info_outline_rounded,
                     size: 18, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1244,7 +1244,7 @@ class _MacroStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         borderRadius: BorderRadius.circular(14),
