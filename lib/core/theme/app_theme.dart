@@ -199,19 +199,19 @@ class AppTheme {
       ),
 
       textTheme: TextTheme(
-        displayLarge: AppTypography.displayLarge.copyWith(color: textPrimary),
+        displayLarge:  AppTypography.displayLarge.copyWith(color: textPrimary),
         displayMedium: AppTypography.displayMedium.copyWith(color: textPrimary),
         headlineLarge: AppTypography.headlineLarge.copyWith(color: textPrimary),
         headlineMedium: AppTypography.headlineMedium.copyWith(color: textPrimary),
         headlineSmall: AppTypography.headlineSmall.copyWith(color: textPrimary),
-        titleLarge: AppTypography.titleLarge.copyWith(color: textPrimary),
-        titleMedium: AppTypography.titleMedium.copyWith(color: textPrimary),
-        bodyLarge: AppTypography.bodyLarge.copyWith(color: textPrimary),
-        bodyMedium: AppTypography.bodyMedium.copyWith(color: textPrimary),
-        bodySmall: AppTypography.bodySmall.copyWith(color: textSecondary),
-        labelLarge: AppTypography.labelLarge.copyWith(color: textPrimary),
-        labelMedium: AppTypography.labelMedium.copyWith(color: textSecondary),
-        labelSmall: AppTypography.labelSmall.copyWith(color: textSecondary),
+        titleLarge:    AppTypography.titleLarge.copyWith(color: textPrimary),
+        titleMedium:   AppTypography.titleMedium.copyWith(color: textPrimary),
+        bodyLarge:     AppTypography.bodyLarge.copyWith(color: textPrimary),
+        bodyMedium:    AppTypography.bodyMedium.copyWith(color: textPrimary),
+        bodySmall:     AppTypography.bodySmall.copyWith(color: textSecondary),
+        labelLarge:    AppTypography.labelLarge.copyWith(color: textPrimary),
+        labelMedium:   AppTypography.labelMedium.copyWith(color: textSecondary),
+        labelSmall:    AppTypography.labelSmall.copyWith(color: textSecondary),
       ),
 
       chipTheme: ChipThemeData(

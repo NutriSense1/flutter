@@ -306,12 +306,14 @@ class _MacroBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final progress = target > 0 ? (value / target).clamp(0.0, 1.0) : 0.0;
+    final secTxt = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
+    final priTxt = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
 
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTypography.labelSmall),
+          Text(label, style: AppTypography.labelSmall.copyWith(color: secTxt)),
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
@@ -334,9 +336,7 @@ class _MacroBar extends StatelessWidget {
           ),
           Text(
             '/ ${target.round()}$unit',
-            style: AppTypography.labelSmall.copyWith(
-              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-            ),
+            style: AppTypography.labelSmall.copyWith(color: secTxt),
           ),
         ],
       ),

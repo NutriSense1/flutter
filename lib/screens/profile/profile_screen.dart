@@ -153,12 +153,14 @@ class _BmiStat extends StatelessWidget {
   const _BmiStat({required this.label, required this.value});
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secTxt = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
     return Expanded(
       child: Column(
         children: [
           Text(value, style: AppTypography.titleLarge.copyWith(color: AppColors.primary)),
           const SizedBox(height: 4),
-          Text(label, style: AppTypography.labelSmall),
+          Text(label, style: AppTypography.labelSmall.copyWith(color: secTxt)),
         ],
       ),
     );
@@ -183,6 +185,10 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = color ??
+        (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary);
+    final iconColor = color ?? secTxt;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -190,9 +196,14 @@ class _SettingsTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: color ?? secTxt, size: 22),
+            Icon(icon, color: iconColor, size: 22),
             const SizedBox(width: 16),
-            Expanded(child: Text(label, style: AppTypography.bodyLarge.copyWith(color: color))),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.bodyLarge.copyWith(color: labelColor),
+              ),
+            ),
             if (color == null) Icon(Icons.chevron_right_rounded, color: hintTxt),
           ],
         ),

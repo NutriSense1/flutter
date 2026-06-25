@@ -208,11 +208,13 @@ class _CalItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secTxt = isDark ? AppColors.darkTextSecondary : AppColors.textSecondary;
     return Column(
       children: [
         Text('$value', style: AppTypography.headlineSmall.copyWith(color: color)),
         Text('kcal',   style: AppTypography.labelSmall.copyWith(color: color)),
-        Text(label,    style: AppTypography.labelSmall),
+        Text(label,    style: AppTypography.labelSmall.copyWith(color: secTxt)),
       ],
     );
   }

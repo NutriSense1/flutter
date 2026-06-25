@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
+/// All TextStyles here are **colour-free** so they inherit the correct
+/// foreground colour from [DefaultTextStyle] / [ThemeData.textTheme].
+/// Colours are applied by [AppTheme._buildTheme] and by individual widgets
+/// when they need a non-default tint (e.g. secondary, accent).
 class AppTypography {
   AppTypography._();
 
@@ -10,7 +13,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 32,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     letterSpacing: -0.5,
     height: 1.2,
   );
@@ -19,7 +21,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 28,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     letterSpacing: -0.5,
     height: 1.2,
   );
@@ -28,7 +29,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 24,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     letterSpacing: -0.3,
     height: 1.3,
   );
@@ -37,7 +37,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 20,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
     height: 1.3,
   );
 
@@ -45,7 +44,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 18,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
     height: 1.4,
   );
 
@@ -53,7 +51,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
     height: 1.4,
   );
 
@@ -61,7 +58,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w600,
-    color: AppColors.textPrimary,
     height: 1.5,
   );
 
@@ -69,7 +65,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
     height: 1.5,
   );
 
@@ -77,7 +72,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    color: AppColors.textPrimary,
     height: 1.5,
   );
 
@@ -85,7 +79,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 12,
     fontWeight: FontWeight.w400,
-    color: AppColors.textSecondary,
     height: 1.5,
   );
 
@@ -110,7 +103,6 @@ class AppTypography {
     fontSize: 10,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.5,
-    color: AppColors.textSecondary,
     height: 1.4,
   );
 
@@ -118,7 +110,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 36,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     height: 1.1,
   );
 
@@ -126,7 +117,6 @@ class AppTypography {
     fontFamily: fontFamily,
     fontSize: 24,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
     height: 1.2,
   );
 }
