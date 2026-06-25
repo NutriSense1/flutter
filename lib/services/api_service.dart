@@ -321,13 +321,5 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  // ─── Account ───────────────────────────────────────────────────────────────
-
-  Future<void> deleteAccount() async {
-    final uri = Uri.parse('${AppConstants.baseUrl}/users/me');
-    final response = await _delete(uri);
-    if (response.statusCode != 204) await _handleResponse(response);
-  }
-
   void dispose() => _client.close();
 }
