@@ -60,9 +60,14 @@ class _MainShellState extends ConsumerState<MainShell> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final idx = _currentIndex(context);
+    // Only show the scan FAB on Home (0) and Diary (1) — it's irrelevant and
+    // obstructs content on Coach (2) and Stats (3).
+    final showFab = idx == 0 || idx == 1;
     return Scaffold(
       body: widget.child,
-      floatingActionButton: _PremiumFAB(pulseScale: _pulseScale, pulseOpacity: _pulseOpacity),
+      floatingActionButton: showFab
+          ? _PremiumFAB(pulseScale: _pulseScale, pulseOpacity: _pulseOpacity)
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _PremiumNavBar(
         currentIndex: idx,
@@ -90,6 +95,8 @@ class _PremiumNavBar extends StatelessWidget {
 
   const _PremiumNavBar({required this.currentIndex, required this.onTap});
 
+  bool get _showFabGap => currentIndex == 0 || currentIndex == 1;
+
   @override
   Widget build(BuildContext context) {
     final isDark   = Theme.of(context).brightness == Brightness.dark;
@@ -112,25 +119,33 @@ class _PremiumNavBar extends StatelessWidget {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          child: Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [0, 1].map((i) => Expanded(
+          child: _showFabGap
+              // Home & Diary: split row with centre gap for the FAB
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [0, 1].map((i) => Expanded(
+                          child: _NavItem(data: _items[i], isActive: currentIndex == i, onTap: () => onTap(i), inactiveColor: inactive),
+                        )).toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 72),
+                    Expanded(
+                      child: Row(
+                        children: [2, 3].map((i) => Expanded(
+                          child: _NavItem(data: _items[i], isActive: currentIndex == i, onTap: () => onTap(i), inactiveColor: inactive),
+                        )).toList(),
+                      ),
+                    ),
+                  ],
+                )
+              // Coach & Stats: evenly spread all 4 tabs, no gap
+              : Row(
+                  children: List.generate(4, (i) => Expanded(
                     child: _NavItem(data: _items[i], isActive: currentIndex == i, onTap: () => onTap(i), inactiveColor: inactive),
-                  )).toList(),
+                  )),
                 ),
-              ),
-              const SizedBox(width: 72),
-              Expanded(
-                child: Row(
-                  children: [2, 3].map((i) => Expanded(
-                    child: _NavItem(data: _items[i], isActive: currentIndex == i, onTap: () => onTap(i), inactiveColor: inactive),
-                  )).toList(),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

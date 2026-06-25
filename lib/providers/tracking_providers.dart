@@ -57,11 +57,25 @@ class WaterLogNotifier extends StateNotifier<List<WaterLogModel>> {
 }
 
 final todayWaterProvider = Provider<double>((ref) {
-  return ref.watch(waterLogsProvider.notifier).totalForDate(DateTime.now());
+  final logs = ref.watch(waterLogsProvider); // watch STATE so we rebuild on changes
+  final today = DateTime.now();
+  return logs
+      .where((l) =>
+          l.loggedAt.year == today.year &&
+          l.loggedAt.month == today.month &&
+          l.loggedAt.day == today.day)
+      .fold(0.0, (sum, l) => sum + l.amountLiters);
 });
 
 final todayWaterLogsProvider = Provider<List<WaterLogModel>>((ref) {
-  return ref.watch(waterLogsProvider.notifier).logsForDate(DateTime.now());
+  final logs = ref.watch(waterLogsProvider); // watch STATE so we rebuild on changes
+  final today = DateTime.now();
+  return logs
+      .where((l) =>
+          l.loggedAt.year == today.year &&
+          l.loggedAt.month == today.month &&
+          l.loggedAt.day == today.day)
+      .toList();
 });
 
 // ─── Weight Provider ───────────────────────────────────────────────────────────

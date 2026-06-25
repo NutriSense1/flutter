@@ -125,6 +125,16 @@ class ApiService {
     return UserModel.fromJson(json as Map<String, dynamic>);
   }
 
+  /// Permanently deletes the account — Supabase rows (cascade) + Firebase Auth.
+  /// Returns normally on 204. Throws [ApiException] on any other status.
+  Future<void> deleteAccount() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/users/me');
+    final response = await _delete(uri);
+    if (response.statusCode != 204) {
+      await _handleResponse(response); // will throw ApiException
+    }
+  }
+
   // ─── Food Logs ─────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getFoodLogs({DateTime? date}) async {

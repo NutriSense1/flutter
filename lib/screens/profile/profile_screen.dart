@@ -6,12 +6,101 @@ import '../../core/theme/app_typography.dart';
 import '../../core/router/app_router.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _deleting = false;
+
+  Future<void> _confirmDeleteAccount() async {
+    // Step 1: Intent warning
+    final warned = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'This permanently erases your profile, food logs, water logs, weight history, '
+          'scan results, achievements, and AI coach history.\n\nThis cannot be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Continue', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (warned != true || !mounted) return;
+
+    // Step 2: Type DELETE to confirm
+    final ctrl = TextEditingController();
+    bool canConfirm = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInner) => AlertDialog(
+          title: const Text('Type DELETE to confirm'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Once deleted, your account cannot be recovered.',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.error),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'DELETE'),
+                onChanged: (v) => setInner(() => canConfirm = v.trim() == 'DELETE'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+            TextButton(
+              onPressed: canConfirm ? () => Navigator.of(ctx).pop(true) : null,
+              child: const Text('Delete forever', style: TextStyle(color: AppColors.error)),
+            ),
+          ],
+        ),
+      ),
+    );
+    ctrl.dispose();
+    if (confirmed != true || !mounted) return;
+
+    // Step 3: Execute
+    setState(() => _deleting = true);
+    try {
+      await ref.read(apiServiceProvider).deleteAccount();
+      await ref.read(notificationServiceProvider).removeTokenOnSignOut();
+      await ref.read(authServiceProvider).signOut();
+      ref.read(userProvider.notifier).clearUser();
+      if (mounted) context.go(AppRoutes.auth);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Something went wrong. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final user    = ref.watch(userProvider);
     final isDark  = Theme.of(context).brightness == Brightness.dark;
     final surface = isDark ? AppColors.darkSurface : AppColors.surface;
@@ -139,6 +228,43 @@ class ProfileScreen extends ConsumerWidget {
                 ref.read(userProvider.notifier).clearUser();
                 if (context.mounted) context.go(AppRoutes.auth);
               },
+            ),
+            const SizedBox(height: 8),
+            // ── Delete Account ────────────────────────────────────────────
+            InkWell(
+              onTap: _deleting ? null : _confirmDeleteAccount,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Row(
+                  children: [
+                    _deleting
+                        ? const SizedBox(
+                            width: 22, height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.error),
+                          )
+                        : const Icon(Icons.delete_forever_rounded, color: AppColors.error, size: 22),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delete Account',
+                            style: AppTypography.bodyLarge.copyWith(color: AppColors.error),
+                          ),
+                          Text(
+                            'Permanently erase all your data',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: isDark ? AppColors.darkTextHint : AppColors.textHint,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
