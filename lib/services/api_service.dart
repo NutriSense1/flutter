@@ -246,11 +246,37 @@ class ApiService {
     return await _handleResponse(response) as Map<String, dynamic>;
   }
 
-  Future<String> askCoach(String message) async {
+  /// Sends a message to the AI coach (agentic).
+  /// Returns the full response: reply, session_id, session_title, actions.
+  Future<Map<String, dynamic>> askCoach(
+    String message, {
+    String? sessionId,
+  }) async {
     final uri = Uri.parse('${AppConstants.baseUrl}/ai/coach/chat');
-    final response = await _post(uri, body: jsonEncode({'message': message}));
-    final json = await _handleResponse(response) as Map<String, dynamic>;
-    return json['reply'] as String;
+    final response = await _post(
+      uri,
+      body: jsonEncode({
+        'message': message,
+        if (sessionId != null) 'session_id': sessionId,
+      }),
+    );
+    return await _handleResponse(response) as Map<String, dynamic>;
+  }
+
+  /// List all past chat sessions for the current user.
+  Future<List<Map<String, dynamic>>> getChatSessions() async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/ai/coach/sessions');
+    final response = await _get(uri);
+    return (await _handleResponse(response) as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+  }
+
+  /// Load the full message history for one session.
+  Future<List<Map<String, dynamic>>> getChatMessages(String sessionId) async {
+    final uri = Uri.parse('${AppConstants.baseUrl}/ai/coach/sessions/$sessionId/messages');
+    final response = await _get(uri);
+    return (await _handleResponse(response) as List<dynamic>)
+        .cast<Map<String, dynamic>>();
   }
 
   // ─── Analytics ─────────────────────────────────────────────────────────────

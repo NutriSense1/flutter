@@ -36,6 +36,11 @@ class FoodLogNotifier extends StateNotifier<List<FoodLogModel>> {
     state = state.where((l) => l.id != id).toList();
   }
 
+  /// Add a food log entry created directly from the AI Coach (no scan).
+  void addFromChat(FoodLogModel log) {
+    state = [log, ...state];
+  }
+
   void updateServings(String id, double servings) {
     state = state.map((l) => l.id == id
         ? FoodLogModel(
